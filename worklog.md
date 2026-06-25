@@ -458,3 +458,25 @@ Stage Summary:
 - Currency picker is now a searchable dropdown of 45+ world currencies with country names, auto-filling symbol + code; "Other" allows custom entry.
 - Login screen no longer exposes admin credentials; only the Demo account is shown.
 - Product renamed from FinFlow to Ordiso throughout (UI, metadata, seed data, email domains).
+
+---
+Task ID: DEPLOY-PREP
+Agent: main
+Task: Prepare project for git + Cloudflare Pages deployment (downloadable zip)
+
+Work Log:
+- Removed unused Prisma/SQLite (the app uses Firestore exclusively): deleted src/lib/db.ts, prisma/ folder, db/ folder
+- Cleaned package.json: removed @prisma/client, prisma, @mdxeditor/editor, @reactuses/core, next-intl, react-markdown, react-resizable-panels, react-syntax-highlighter, sharp, z-ai-web-dev-sdk; removed db:* scripts; renamed to ordiso-budget-planner
+- Added @cloudflare/next-on-pages devDependency + `pages:build` script
+- Updated next.config.ts: removed output:"standalone" (incompatible with Cloudflare Pages), set serverActions bodySizeLimit for the Workers 3MB limit
+- Created .env.example with NEXTAUTH_SECRET + NEXTAUTH_URL placeholders
+- Created wrangler.toml with nodejs_compat compatibility flag + .vercel/output/static output dir
+- Created comprehensive README.md with: prerequisites, local dev steps, Firebase Firestore setup + security rules, two Cloudflare Pages deployment options (Git connect + Wrangler CLI), post-deploy steps, project structure, tech stack
+- Updated .gitignore to exclude: node_modules, .next, .git, .env (keep .env.example), logs, sandbox artifacts (skills/, examples/, mini-services/, .zscripts/, upload/, download/, tool-results/, worklog.md, Caddyfile)
+- Created clean zip at upload/ordiso.zip (297K, 160 files) — excludes all junk, includes all source + README + .env.example + wrangler.toml + package.json
+- Verified: bun run lint → 0 errors; dev server runs (HTTP 200)
+
+Stage Summary:
+- Project is deployment-ready: clean source, no unused deps, proper .gitignore, .env.example, wrangler.toml, README with step-by-step Cloudflare Pages instructions
+- Downloadable zip at upload/ordiso.zip (297K)
+- Deploy path: push to git → Cloudflare Pages → connect repo → build command "npx @cloudflare/next-on-pages@latest" → output ".vercel/output/static" → add env vars + nodejs_compat flag

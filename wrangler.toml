@@ -1,0 +1,13 @@
+# Cloudflare Pages configuration for @cloudflare/next-on-pages
+# This file is optional — the Cloudflare dashboard settings take precedence —
+# but committing it makes deployments reproducible.
+
+name = "ordiso"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+# Environment variables — set sensitive values in the Cloudflare dashboard,
+# not in this file.
+[vars]
+NEXTAUTH_URL = "https://ordiso.pages.dev"
