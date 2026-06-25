@@ -117,8 +117,14 @@ service cloud.firestore {
      - `NEXTAUTH_SECRET` = a random string (run `openssl rand -base64 32`)
      - `NEXTAUTH_URL` = `https://your-project-name.pages.dev` (add after first deploy to get the URL)
      - `NODE_VERSION` = `20`
+     - `NPM_FLAGS` = `--legacy-peer-deps` (resolves the Next 16 / adapter peer-dep range — the `.npmrc` in the repo also sets this, but setting the env var ensures Cloudflare's installer uses it)
    - Under **Settings → Functions → Compatibility flags**, add: `nodejs_compat`
    - Click **Save and Deploy**
+
+> **Why `--legacy-peer-deps`?** `@cloudflare/next-on-pages` declares a peer
+> dependency of `next >=14.3.0 && <=15.5.2`, but this project uses Next.js 16.
+> The `.npmrc` file in the repo tells npm to ignore the mismatch; the adapter
+> still builds Next 16 output correctly.
 
 3. After the first deploy, update `NEXTAUTH_URL` to your production URL
    (e.g. `https://ordiso.pages.dev`) and trigger a redeploy.
