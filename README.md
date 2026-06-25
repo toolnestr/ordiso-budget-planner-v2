@@ -91,7 +91,13 @@ service cloud.firestore {
 
 ---
 
-## 3 · Deploy to Cloudflare Pages
+## 3 · Deploy to Cloudflare Workers
+
+This project uses the **OpenNext Cloudflare adapter** (`@opennextjs/cloudflare`)
+which builds the Next.js app for Cloudflare Workers with **full Node.js runtime
+support**. This is required because the app uses NextAuth, bcryptjs, and the
+Firebase Firestore SDK — none of which are compatible with the Edge Runtime that
+the older `@cloudflare/next-on-pages` adapter forces.
 
 ### Option A — Connect via Git (recommended)
 
@@ -106,30 +112,29 @@ service cloud.firestore {
    ```
 
 2. **In the Cloudflare dashboard**:
-   - Go to [Cloudflare Pages](https://dash.cloudflare.com/?to=/:account/pages)
-   - Click **Create a project** → **Connect to Git**
+   - Go to **Workers & Pages** → [Create](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create)
+   - Click **Create Worker** (or **Connect to Git**)
    - Select your `ordiso` repository
    - Set the build settings:
      - **Framework preset:** `Next.js`
-     - **Build command:** `npx @cloudflare/next-on-pages@latest`
-     - **Build output directory:** `.vercel/output/static`
-   - Under **Environment variables** (Settings → Environment variables), add:
+     - **Build command:** `npx @opennextjs/cloudflare build`
+     - **Deploy command:** `npx wrangler deploy`
+   - Under **Environment variables** (Settings → Variables), add:
      - `NEXTAUTH_SECRET` = a random string (run `openssl rand -base64 32`)
-     - `NEXTAUTH_URL` = `https://your-project-name.pages.dev` (add after first deploy to get the URL)
+     - `NEXTAUTH_URL` = `https://ordiso.<your-subdomain>.workers.dev` (update after first deploy to your real URL)
      - `NODE_VERSION` = `20`
-     - `NPM_FLAGS` = `--legacy-peer-deps` (resolves the Next 16 / adapter peer-dep range — the `.npmrc` in the repo also sets this, but setting the env var ensures Cloudflare's installer uses it)
-   - Under **Settings → Functions → Compatibility flags**, add: `nodejs_compat`
    - Click **Save and Deploy**
 
-> **Why `--legacy-peer-deps`?** `@cloudflare/next-on-pages` declares a peer
-> dependency of `next >=14.3.0 && <=15.5.2`, but this project uses Next.js 16.
-> The `.npmrc` file in the repo tells npm to ignore the mismatch; the adapter
-> still builds Next 16 output correctly.
-
 3. After the first deploy, update `NEXTAUTH_URL` to your production URL
-   (e.g. `https://ordiso.pages.dev`) and trigger a redeploy.
+   and trigger a redeploy.
 
-### Option B — Deploy via Wrangler CLI
+> **Why OpenNext and not `@cloudflare/next-on-pages`?** The older adapter
+> requires all API routes to use `export const runtime = 'edge'`, which breaks
+> NextAuth + bcryptjs + Firebase. OpenNext runs the full Node.js runtime on
+> Cloudflare Workers (via the `nodejs_compat` flag), so everything works
+> unchanged.
+
+### Option B — Deploy via Wrangler CLI (from your machine)
 
 ```bash
 # Install Wrangler
@@ -138,18 +143,23 @@ npm install -g wrangler
 # Login to Cloudflare
 wrangler login
 
-# Build for Cloudflare Pages
-npm run pages:build
+# Install dependencies
+npm install
 
-# Deploy
-wrangler pages deploy .vercel/output/static --project-name=ordiso
+# Set your secrets (run once — these are stored encrypted)
+wrangler secret put NEXTAUTH_SECRET    # paste a random string
+
+# Build for Cloudflare Workers + deploy
+npm run cf:deploy
 ```
+
+This runs `@opennextjs/cloudflare build` then `wrangler deploy` in one step.
 
 ---
 
 ## 4 · After deployment
 
-1. Visit your Cloudflare Pages URL (e.g. `https://ordiso.pages.dev`)
+1. Visit your Cloudflare Workers URL (e.g. `https://ordiso.<your-subdomain>.workers.dev`)
 2. The app auto-seeds the admin + demo accounts on first visit
 3. Log in as **admin@ordiso.app / admin123**
 4. Go to **Admin Console** → **Create User** to make accounts for your customers
