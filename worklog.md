@@ -272,3 +272,39 @@ Stage Summary:
 - All 8 tabs fully functional and verified end-to-end in the browser
 - Lint clean (0 errors), dev server compiles cleanly, all API routes return 200
 - Production-ready budget planner with emerald/teal financial theme, dark mode, responsive design
+
+---
+Task ID: F1-F5
+Agent: main
+Task: Migrate the entire data layer from Prisma/SQLite to Firebase Firestore
+
+Work Log:
+- Installed `firebase` package (v12.15.0)
+- Created `src/lib/firebase.ts` — initializes the Firebase app with the provided web config (project etsy-229e5) and exports the Firestore instance (server-side, memory-only)
+- Created `src/lib/firestore.ts` — a Prisma-shaped data-access helper (getAll, getWhere, getWhereMulti, getById, createAuto, createWithId, upsertDoc, updateDocById, deleteById, deleteWhere, updateWhere, batchCreate, countAll, deleteAll) that strips undefined values and adds `id` to returned docs
+- Migrated ALL 18 API routes from Prisma to Firestore:
+  * settings, weekly-checkin (upsert to singleton/weekStart doc ids)
+  * accounts(+id), categories(+id), income(+id) — simple CRUD with manual max-sortOrder computation
+  * transactions(+id) — with manual category/account joins; split transactions via parentTransactionId; date range queries as ISO strings
+  * savings-goals(+id) — contribution via read-modify-write increment
+  * debts(+id, +id/payment) — manual payments join + balance decrement + paidOff clamp
+  * bills(+id) — client-side sorting
+  * budgets — composite doc id `${year}_${month}_${categoryId}` for upsert; manual actual/rollover aggregation
+  * dashboard — single 7-month transaction fetch (avoids 6 queries); manual category join; in-JS filtering for trend/accounts/goals
+  * reports — single year transaction fetch; in-JS monthly heatmap + trend
+  * seed — batched deletes (deleteAll) + sequential creates for relation ids + batchCreate for bulk inserts; ISO-string dates throughout
+- Conventions: dates stored as ISO strings (lexicographic sort enables range queries); collections = settings, accounts, categories, incomeSources, transactions, monthlyBudgets, savingsGoals, debts, debtPayments, bills, weeklyCheckins
+- Added graceful Firestore-unavailable handling:
+  * `FirestoreSetupScreen` component with 3-step enable instructions + direct console link + retry button
+  * page.tsx bootstrap probes `/api/seed`; on failure shows the setup screen instead of infinite skeletons
+  * `/api/seed` GET races countAll against a 7s timeout, returns 503 if Firestore unreachable
+  * client `probeAndSeed` uses AbortController (9s GET, 30s POST) so the setup screen appears promptly
+  * DashboardTab shows a "Couldn't reach Firestore" error state with retry when the query fails
+- Prisma schema + db.ts left in place (unused) for reference; all routes now import from `@/lib/firestore`
+- `bun run lint` → 0 errors, 0 warnings
+
+Stage Summary:
+- Full Firebase Firestore migration complete; all 18 API routes rewritten
+- Frontend hooks/components unchanged (same /api/... contracts)
+- BLOCKER (user action required): Firestore Database must be enabled in the Firebase Console for project etsy-229e5. The app detects this and shows a guided setup screen with a retry button. Steps: Firebase Console → etsy-229e5 → Firestore Database → Create database (test mode).
+- Once Firestore is enabled, the app auto-seeds sample data and all 8 tabs work end-to-end against Firestore.

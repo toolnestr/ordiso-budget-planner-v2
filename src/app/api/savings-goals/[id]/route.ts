@@ -1,37 +1,39 @@
-import { db } from '@/lib/db'
-import { ok, err, serialize } from '@/lib/api'
+import { getById, updateDocById, deleteById } from '@/lib/firestore'
+import { ok, serialize } from '@/lib/api'
+import type { SavingsGoal } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
+
+const COLL = 'savingsGoals'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const body = await req.json()
 
-  // If body.addAmount is provided, add to savedAmount (contribution)
+  // Contribution: add to savedAmount
   if (body.addAmount != null) {
-    const g = await db.savingsGoal.update({
-      where: { id },
-      data: { savedAmount: { increment: Number(body.addAmount) } },
-    })
+    const current = await getById<SavingsGoal>(COLL, id)
+    if (!current) return ok({ success: false })
+    const newSaved = (current.savedAmount ?? 0) + Number(body.addAmount)
+    await updateDocById<SavingsGoal>(COLL, id, { savedAmount: newSaved })
+    const g = await getById<SavingsGoal>(COLL, id)
     return ok(serialize(g))
   }
 
-  const g = await db.savingsGoal.update({
-    where: { id },
-    data: {
-      name: body.name,
-      targetAmount: body.targetAmount != null ? Number(body.targetAmount) : undefined,
-      savedAmount: body.savedAmount != null ? Number(body.savedAmount) : undefined,
-      targetDate: body.targetDate != null ? (body.targetDate ? new Date(body.targetDate) : null) : undefined,
-      color: body.color,
-      icon: body.icon,
-    },
+  await updateDocById<SavingsGoal>(COLL, id, {
+    name: body.name,
+    targetAmount: body.targetAmount != null ? Number(body.targetAmount) : undefined,
+    savedAmount: body.savedAmount != null ? Number(body.savedAmount) : undefined,
+    targetDate: body.targetDate != null ? (body.targetDate ? new Date(body.targetDate).toISOString() : null) : undefined,
+    color: body.color,
+    icon: body.icon,
   })
+  const g = await getById<SavingsGoal>(COLL, id)
   return ok(serialize(g))
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  await db.savingsGoal.delete({ where: { id } })
+  await deleteById(COLL, id)
   return ok({ success: true })
 }

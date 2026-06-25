@@ -8,6 +8,7 @@ import {
 import {
   ArrowDownCircle, ArrowUpCircle, PiggyBank, Wallet, TrendingUp, TrendingDown,
   AlertTriangle, CalendarClock, CheckCircle2, Circle, Banknote, CreditCard, Landmark,
+  RefreshCw,
 } from 'lucide-react'
 import { useDashboard, useUpdateWeeklyCheckin, useSettings } from '@/lib/api-hooks'
 import { useBudgetStore } from '@/lib/store'
@@ -50,7 +51,7 @@ function ChartTooltipContent({ active, payload, label, currency }: { active?: bo
 
 export function DashboardTab() {
   const { month, year } = useBudgetStore()
-  const { data, isLoading } = useDashboard(month, year)
+  const { data, isLoading, error, refetch } = useDashboard(month, year)
   const { data: settings } = useSettings()
   const updateCheckin = useUpdateWeeklyCheckin()
   const sym = settings?.currencySymbol ?? '$'
@@ -61,6 +62,23 @@ export function DashboardTab() {
   }, [data])
 
   const barData = useMemo(() => data?.incomeVsExpenseTrend ?? [], [data])
+
+  if (error && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 mb-4">
+          <AlertTriangle className="h-6 w-6" />
+        </div>
+        <h3 className="font-semibold mb-1">Couldn&apos;t reach Firestore</h3>
+        <p className="text-sm text-muted-foreground max-w-md mb-4">
+          Your data couldn&apos;t be loaded. If you just enabled Firestore, it may take a minute to propagate. Otherwise, enable the Firestore database in your Firebase project.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+          <RefreshCw className="h-3.5 w-3.5" /> Try again
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading || !data) {
     return (

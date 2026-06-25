@@ -1,6 +1,7 @@
-import { db } from '@/lib/db'
+import { getAll, getWhereMulti } from '@/lib/firestore'
 import { ok, serialize, monthRange } from '@/lib/api'
 import { monthShort } from '@/lib/format'
+import type { Transaction, Category } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,42 +13,53 @@ export async function GET(req: Request) {
   const start = new Date(year, 0, 1)
   const end = new Date(year + 1, 0, 1)
 
-  const txs = await db.transaction.findMany({
-    where: { date: { gte: start, lt: end }, parentTransactionId: null },
-    include: { category: true },
-  })
+  const [txs, categories] = await Promise.all([
+    getWhereMulti<Transaction>('transactions', [
+      { field: 'date', op: '>=', value: start.toISOString() },
+      { field: 'date', op: '<', value: end.toISOString() },
+    ]),
+    getAll<Category>('categories'),
+  ])
+  const catMap = new Map(categories.map((c) => [c.id, c]))
+  const topOnly = txs.filter((t) => !t.parentTransactionId)
+  const txsWithCat = topOnly.map((t) => ({ ...t, category: t.categoryId ? catMap.get(t.categoryId) ?? null : null }))
 
   // Monthly trend
   const monthlyTrend: { month: string; monthNum: number; income: number; expenses: number; savings: number; netWorth: number }[] = []
   for (let m = 1; m <= 12; m++) {
     const { start: ms, end: me } = monthRange(m, year)
-    const monthTxs = txs.filter((t) => t.date >= ms && t.date < me)
+    const monthTxs = txsWithCat.filter((t) => {
+      const d = new Date(t.date)
+      return d >= ms && d < me
+    })
     const income = monthTxs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0)
     const expenses = monthTxs.filter((t) => t.type === 'EXPENSE' && t.category?.group !== 'SAVING').reduce((s, t) => s + t.amount, 0)
-    const savings = income - expenses
-    monthlyTrend.push({ month: monthShort(m), monthNum: m, income, expenses, savings, netWorth: 0 })
+    monthlyTrend.push({ month: monthShort(m), monthNum: m, income, expenses, savings: income - expenses, netWorth: 0 })
   }
 
-  // Running net worth (cumulative savings) for visual
+  // Running net worth (cumulative savings)
   let cumulative = 0
   for (const mt of monthlyTrend) {
     cumulative += mt.savings
     mt.netWorth = cumulative
   }
 
-  // Category heatmap — expense categories x 12 months
-  const categoryMap = new Map<string, { category: string; color: string; icon: string; months: number[] }>()
+  // Category heatmap (top 10 expense categories x 12 months)
+  const categoryAgg = new Map<string, { category: string; color: string; icon: string; months: number[] }>()
   for (let m = 1; m <= 12; m++) {
     const { start: ms, end: me } = monthRange(m, year)
-    const monthTxs = txs.filter((t) => t.date >= ms && t.date < me && t.type === 'EXPENSE' && t.category && t.category.group !== 'SAVING')
+    const monthTxs = txsWithCat.filter((t) => {
+      const d = new Date(t.date)
+      return d >= ms && d < me && t.type === 'EXPENSE' && t.category && t.category.group !== 'SAVING'
+    })
     for (const t of monthTxs) {
       const key = t.categoryId ?? 'uncat'
-      const existing = categoryMap.get(key) ?? { category: t.category?.name ?? 'Uncategorized', color: t.category?.color ?? 'slate', icon: t.category?.icon ?? '📁', months: new Array(12).fill(0) }
+      const existing = categoryAgg.get(key) ?? { category: t.category?.name ?? 'Uncategorized', color: t.category?.color ?? 'slate', icon: t.category?.icon ?? '📁', months: new Array(12).fill(0) }
       existing.months[m - 1] += t.amount
-      categoryMap.set(key, existing)
+      categoryAgg.set(key, existing)
     }
   }
-  const categoryHeatmap = Array.from(categoryMap.values())
+  const categoryHeatmap = Array.from(categoryAgg.values())
     .map((c) => ({ ...c, total: c.months.reduce((s, v) => s + v, 0) }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)
@@ -58,10 +70,10 @@ export async function GET(req: Request) {
   const totalSaved = totalIncome - totalExpenses
   const monthsWithData = monthlyTrend.filter((m) => m.income > 0 || m.expenses > 0).length
   const avgMonthlySpending = monthsWithData > 0 ? totalExpenses / monthsWithData : 0
-  const bestMonth = monthlyTrend.filter((m) => m.income > 0 || m.expenses > 0).sort((a, b) => b.savings - a.savings)[0]
-  const worstMonth = monthlyTrend.filter((m) => m.income > 0 || m.expenses > 0).sort((a, b) => a.savings - b.savings)[0]
+  const withData = monthlyTrend.filter((m) => m.income > 0 || m.expenses > 0)
+  const bestMonth = withData.slice().sort((a, b) => b.savings - a.savings)[0]
+  const worstMonth = withData.slice().sort((a, b) => a.savings - b.savings)[0]
 
-  // Top categories overall
   const topCategories = categoryHeatmap.map((c) => ({ name: c.category, color: c.color, icon: c.icon, amount: c.total, percent: totalExpenses > 0 ? (c.total / totalExpenses) * 100 : 0 }))
 
   return ok(serialize({
