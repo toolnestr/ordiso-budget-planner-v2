@@ -1,0 +1,142 @@
+// Budget Planner — Prisma schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Settings {
+  id                  String  @id @default("singleton")
+  currencySymbol      String  @default("$")
+  currencyCode        String  @default("USD")
+  cashEnvelopeMode    Boolean @default(false)
+  weeklyCheckinDay    Int     @default(0) // 0 = Sunday
+  setupComplete       Boolean @default(false)
+  plannerName         String  @default("My Budget")
+}
+
+model Account {
+  id             String        @id @default(cuid())
+  name           String
+  type           String        @default("CHECKING") // CHECKING | SAVINGS | CREDIT | CASH
+  startingBalance Float        @default(0)
+  color          String        @default("emerald")
+  createdAt      DateTime      @default(now())
+  transactions   Transaction[]
+}
+
+model Category {
+  id         String          @id @default(cuid())
+  name       String
+  type       String          @default("EXPENSE") // INCOME | EXPENSE
+  group      String          @default("VARIABLE") // FIXED | VARIABLE | SAVING | DEBT
+  color      String          @default("emerald")
+  icon       String          @default("📁")
+  rollover   Boolean         @default(false)
+  sortOrder  Int             @default(0)
+  isSystem   Boolean         @default(false)
+  transactions Transaction[]
+  budgets    MonthlyBudget[]
+}
+
+model IncomeSource {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @default("PRIMARY") // PRIMARY | SIDE | PASSIVE
+  expectedMonthly Float    @default(0)
+  isIrregular     Boolean  @default(false)
+  notes           String?
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+}
+
+model Transaction {
+  id                 String      @id @default(cuid())
+  date               DateTime    @default(now())
+  description        String
+  amount             Float       @default(0)
+  type               String      @default("EXPENSE") // INCOME | EXPENSE | TRANSFER
+  categoryId         String?
+  category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  accountId          String?
+  account            Account?    @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  notes              String?
+  isSplit            Boolean     @default(false)
+  parentTransactionId String?    // links split children to parent
+  isReconciled       Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+}
+
+model MonthlyBudget {
+  id         String   @id @default(cuid())
+  month      Int      // 1-12
+  year       Int
+  categoryId String
+  planned    Float    @default(0)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([month, year, categoryId])
+}
+
+model SavingsGoal {
+  id            String   @id @default(cuid())
+  name          String
+  targetAmount  Float    @default(0)
+  savedAmount   Float    @default(0)
+  targetDate    DateTime?
+  color         String   @default("emerald")
+  icon          String   @default("🎯")
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model Debt {
+  id             String         @id @default(cuid())
+  name           String
+  creditor       String?
+  currentBalance Float          @default(0)
+  originalBalance Float         @default(0)
+  interestRate   Float          @default(0)
+  minimumPayment Float          @default(0)
+  strategy       String         @default("SNOWBALL") // SNOWBALL | AVALANCHE | CUSTOM
+  sortOrder      Int            @default(0)
+  paidOff        Boolean        @default(false)
+  payments       DebtPayment[]
+  createdAt      DateTime       @default(now())
+}
+
+model DebtPayment {
+  id      String   @id @default(cuid())
+  debtId  String
+  debt    Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  date    DateTime @default(now())
+  amount  Float    @default(0)
+  note    String?
+}
+
+model Bill {
+  id            String   @id @default(cuid())
+  name          String
+  amount        Float    @default(0)
+  frequency     String   @default("MONTHLY") // WEEKLY | MONTHLY | QUARTERLY | BIANNUAL | ANNUAL
+  dueDay        Int      @default(1) // day of month, or weekday for weekly
+  category      String?
+  isSubscription Boolean @default(false)
+  cancelFlag    Boolean  @default(false)
+  lastPaidDate  DateTime?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model WeeklyCheckin {
+  id                 String   @id @default(cuid())
+  weekStart          DateTime @unique
+  loggedReceipts     Boolean  @default(false)
+  paidBills          Boolean  @default(false)
+  reviewedBudget     Boolean  @default(false)
+  reconciledAccounts Boolean  @default(false)
+  createdAt          DateTime @default(now())
+}
