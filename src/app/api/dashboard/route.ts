@@ -1,5 +1,6 @@
-import { getAll, getWhereMulti, getById, upsertDoc } from '@/lib/firestore'
+import { getById, upsertDoc, getWhere } from '@/lib/firestore'
 import { ok, serialize, monthRange, startOfWeek } from '@/lib/api'
+import { requireUser } from '@/lib/session'
 import { monthName, monthShort } from '@/lib/format'
 import type { Bill, Category, Account, Transaction, Settings, SavingsGoal, Debt, MonthlyBudget } from '@/lib/types'
 
@@ -50,6 +51,9 @@ const DEFAULT_SETTINGS: Settings = {
 }
 
 export async function GET(req: Request) {
+  const user = await requireUser()
+  if (!user) return ok({ unauthorized: true }, { status: 401 })
+
   const url = new URL(req.url)
   const mParam = url.searchParams.get('month')
   const yParam = url.searchParams.get('year')
@@ -57,20 +61,19 @@ export async function GET(req: Request) {
   const month = mParam ? Number(mParam) : now.getMonth() + 1
   const year = yParam ? Number(yParam) : now.getFullYear()
 
-  const settingsDoc = await getById<Settings>('settings', 'singleton')
-  const settings = settingsDoc ?? DEFAULT_SETTINGS
-  if (!settingsDoc) await upsertDoc<Settings>('settings', 'singleton', DEFAULT_SETTINGS)
+  // Settings (per-user doc id)
+  const settingsId = `singleton_${user.userId}`
+  let settingsDoc = await getById<Settings>('settings', settingsId)
+  if (!settingsDoc) settingsDoc = await upsertDoc<Settings & { userId: string }>('settings', settingsId, { ...DEFAULT_SETTINGS, userId: user.userId })
+  const settings = settingsDoc
 
   const { start, end } = monthRange(month, year)
-
-  // Fetch transactions for the last 7 months in ONE query (date >= 6 months ago).
-  // This covers the current month + 6-month trend without 6 separate queries.
   const trendStart = new Date(year, month - 1 - 5, 1)
-  const allTxs = await getWhereMulti<Transaction>('transactions', [
-    { field: 'date', op: '>=', value: trendStart.toISOString() },
-  ])
-  // Join categories for all transactions (one fetch)
-  const categories = await getAll<Category>('categories')
+
+  // Fetch ALL of this user's transactions in a single-field query (no composite
+  // index needed), then filter by date in memory. Per-user volume is small.
+  const allTxs = await getWhere<Transaction>('transactions', 'userId', '==', user.userId)
+  const categories = await getWhere<Category>('categories', 'userId', '==', user.userId)
   const catMap = new Map(categories.map((c) => [c.id, c]))
 
   const inRange = (t: Transaction, s: Date, e: Date) => {
@@ -79,7 +82,6 @@ export async function GET(req: Request) {
   }
   const isTop = (t: Transaction) => !t.parentTransactionId
 
-  // Current-month top-level transactions with category joined
   const txs = allTxs.filter((t) => inRange(t, start, end) && isTop(t)).map((t) => ({ ...t, category: t.categoryId ? catMap.get(t.categoryId) ?? null : null }))
 
   const totalIncome = txs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0)
@@ -88,18 +90,17 @@ export async function GET(req: Request) {
   const netSavings = totalIncome - totalExpenses - plannedSavingsAlloc
   const leftToSpend = totalIncome - totalExpenses - plannedSavingsAlloc
 
-  // Budgets
-  const budgets = await getWhereMulti<MonthlyBudget>('monthlyBudgets', [
-    { field: 'year', op: '==', value: year },
-    { field: 'month', op: '==', value: month },
-  ])
+  // Fetch this user's budgets (single-field query), filter by year/month in memory.
+  const allBudgets = await getWhere<MonthlyBudget>('monthlyBudgets', 'userId', '==', user.userId)
+  const budgets = allBudgets.filter((b) => b.year === year && b.month === month)
   const budgetsWithCat = budgets.map((b) => ({ ...b, category: catMap.get(b.categoryId) }))
   const plannedExpenses = budgetsWithCat.filter((b) => b.category && b.category.group !== 'SAVING' && b.category.group !== 'DEBT' && b.category.type === 'EXPENSE').reduce((s, b) => s + b.planned, 0)
   const plannedSavings = budgetsWithCat.filter((b) => b.category?.group === 'SAVING').reduce((s, b) => s + b.planned, 0)
   const plannedIncome = budgetsWithCat.filter((b) => b.category?.type === 'INCOME').reduce((s, b) => s + b.planned, 0)
 
-  // Accounts with balances — fetch ALL transactions once and group by account
-  const accounts = await getAll<Account>('accounts', { orderByField: 'createdAt', orderDir: 'asc' })
+  // Accounts
+  const accounts = await getWhere<Account>('accounts', 'userId', '==', user.userId)
+  accounts.sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''))
   const txsByAccount = new Map<string, Transaction[]>()
   for (const t of allTxs) {
     if (!t.accountId) continue
@@ -114,7 +115,6 @@ export async function GET(req: Request) {
   })
   const netWorth = accountsWithBalance.reduce((s, a) => s + a.currentBalance, 0)
 
-  // Expense by category (current month)
   const catAgg = new Map<string, { categoryId: string; name: string; color: string; icon: string; amount: number; budget: number }>()
   for (const t of txs) {
     if (t.type !== 'EXPENSE' || !t.category || t.category.group === 'SAVING') continue
@@ -132,7 +132,6 @@ export async function GET(req: Request) {
   const overbudgetCategories = expenseByCategory.filter((c) => c.budget > 0 && c.amount > c.budget).map((c) => ({ name: c.name, color: c.color, budget: c.budget, spent: c.amount }))
   const topSpendingCategories = expenseByCategory.slice(0, 5)
 
-  // Income vs Expense trend (6 months incl. current) — derived from the single fetched set
   const trend: { month: string; income: number; expenses: number; savings: number }[] = []
   for (let i = 5; i >= 0; i--) {
     const d = new Date(year, month - 1 - i, 1)
@@ -143,8 +142,8 @@ export async function GET(req: Request) {
     trend.push({ month: monthShort(d.getMonth() + 1), income: inc, expenses: exp, savings: inc - exp })
   }
 
-  // Savings goals
-  const goals = await getAll<SavingsGoal>('savingsGoals', { orderByField: 'sortOrder', orderDir: 'asc' })
+  const goals = await getWhere<SavingsGoal>('savingsGoals', 'userId', '==', user.userId)
+  goals.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
   const monthTxsAll = allTxs.filter((t) => inRange(t, start, end))
   const goalsWithProgress = goals.map((g) => {
     const contribTxs = monthTxsAll.filter((t) => t.type === 'EXPENSE' && typeof t.description === 'string' && t.description.includes(g.name))
@@ -153,16 +152,15 @@ export async function GET(req: Request) {
     return { ...serialize(g), progress, remaining: Math.max(0, g.targetAmount - g.savedAmount), monthlyContribution }
   })
 
-  // Debts
-  const debts = await getAll<Debt>('debts', { orderByField: 'sortOrder', orderDir: 'asc' })
+  const debts = await getWhere<Debt>('debts', 'userId', '==', user.userId)
+  debts.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
   const debtsWithProgress = debts.map((d) => {
     const progress = d.originalBalance > 0 ? Math.min(100, ((d.originalBalance - d.currentBalance) / d.originalBalance) * 100) : 0
     const payoff = computePayoff(d.currentBalance, d.interestRate, d.minimumPayment)
     return { ...serialize(d), progress, payoffMonths: payoff.months, totalInterest: payoff.totalInterest }
   })
 
-  // Bills due soon
-  const billsAll = await getAll<Bill>('bills')
+  const billsAll = await getWhere<Bill>('bills', 'userId', '==', user.userId)
   const bills = billsAll.filter((b) => b.active)
   const billsWithDue = bills.map((b) => {
     const { date, dueInDays } = nextDueDate(b, new Date())
@@ -170,13 +168,13 @@ export async function GET(req: Request) {
   })
   const billsDueSoon = billsWithDue.filter((b) => b.dueInDays >= 0 && b.dueInDays <= 14).sort((a, b) => a.dueInDays - b.dueInDays)
 
-  // Weekly checkin
   const ws = startOfWeek()
-  const weekId = ws.toISOString()
+  const weekId = `${user.userId}_${ws.toISOString()}`
   let checkin = await getById<Record<string, unknown>>('weeklyCheckins', weekId)
   if (!checkin) {
     checkin = await upsertDoc<Record<string, unknown>>('weeklyCheckins', weekId, {
-      weekStart: weekId,
+      userId: user.userId,
+      weekStart: ws.toISOString(),
       loggedReceipts: false,
       paidBills: false,
       reviewedBudget: false,

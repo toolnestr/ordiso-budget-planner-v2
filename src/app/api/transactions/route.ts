@@ -1,16 +1,16 @@
-import { getAll, getWhereMulti, createAuto } from '@/lib/firestore'
+import { getWhere, createAuto } from '@/lib/firestore'
 import { ok, err, serialize, monthRange } from '@/lib/api'
+import { requireUser } from '@/lib/session'
 import type { Transaction, Category, Account } from '@/lib/types'
-import type { WhereFilterOp } from 'firebase/firestore'
 
 export const dynamic = 'force-dynamic'
 
 const COLL = 'transactions'
 
 /** Attach category + account snapshots to a list of transactions. */
-async function joinRelations(txs: Transaction[]) {
-  const cats = await getAll<Category>('categories')
-  const accs = await getAll<Account>('accounts')
+async function joinRelations(userId: string, txs: Transaction[]) {
+  const cats = await getWhere<Category>('categories', 'userId', '==', userId)
+  const accs = await getWhere<Account>('accounts', 'userId', '==', userId)
   const catMap = new Map(cats.map((c) => [c.id, c]))
   const accMap = new Map(accs.map((a) => [a.id, a]))
   return txs.map((t) => ({
@@ -21,6 +21,9 @@ async function joinRelations(txs: Transaction[]) {
 }
 
 export async function GET(req: Request) {
+  const user = await requireUser()
+  if (!user) return err('Unauthorized', 401)
+
   const url = new URL(req.url)
   const month = url.searchParams.get('month')
   const year = url.searchParams.get('year')
@@ -28,30 +31,27 @@ export async function GET(req: Request) {
   const categoryId = url.searchParams.get('categoryId')
   const limit = url.searchParams.get('limit')
 
-  // Build filters. Date range is two filters on the SAME field (allowed).
-  const filters: { field: string; op: WhereFilterOp; value: unknown }[] = []
+  // Fetch by userId only (single-field, no composite index), filter in memory.
+  let txs = await getWhere<Transaction>(COLL, 'userId', '==', user.userId)
   if (month && year) {
     const { start, end } = monthRange(Number(month), Number(year))
-    filters.push({ field: 'date', op: '>=', value: start.toISOString() })
-    filters.push({ field: 'date', op: '<', value: end.toISOString() })
+    txs = txs.filter((t) => {
+      const d = new Date(t.date)
+      return d >= start && d < end
+    })
   }
-  if (accountId) filters.push({ field: 'accountId', op: '==', value: accountId })
-  if (categoryId) filters.push({ field: 'categoryId', op: '==', value: categoryId })
-
-  let txs: Transaction[]
-  if (filters.length) {
-    txs = await getWhereMulti<Transaction>(COLL, filters)
-  } else {
-    txs = await getAll<Transaction>(COLL)
-  }
-  // Sort by date desc (client-side; combining where+orderBy on different fields needs a composite index)
+  if (accountId) txs = txs.filter((t) => t.accountId === accountId)
+  if (categoryId) txs = txs.filter((t) => t.categoryId === categoryId)
   txs.sort((a, b) => (b.date > a.date ? 1 : -1))
   if (limit) txs = txs.slice(0, Number(limit))
 
-  return ok(await joinRelations(txs))
+  return ok(await joinRelations(user.userId, txs))
 }
 
 export async function POST(req: Request) {
+  const user = await requireUser()
+  if (!user) return err('Unauthorized', 401)
+
   const body = await req.json()
   if (!body.description || body.amount == null) return err('Description and amount are required')
   const dateIso = body.date ? new Date(body.date).toISOString() : new Date().toISOString()
@@ -70,6 +70,7 @@ export async function POST(req: Request) {
       isSplit: true,
       parentTransactionId: null,
       isReconciled: false,
+      userId: user.userId,
       createdAt: new Date().toISOString(),
     })
     for (const sp of body.splits) {
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
         isSplit: false,
         parentTransactionId: parent.id,
         isReconciled: false,
+        userId: user.userId,
         createdAt: new Date().toISOString(),
       })
     }
@@ -101,6 +103,7 @@ export async function POST(req: Request) {
     isSplit: false,
     parentTransactionId: null,
     isReconciled: false,
+    userId: user.userId,
     createdAt: new Date().toISOString(),
   })
   return ok(serialize(tx), { status: 201 })

@@ -329,3 +329,105 @@ Work Log:
 Stage Summary:
 - Firestore is live and the entire app runs against it. All 8 tabs are functional.
 - No code changes were needed beyond restoring the Firestore init (the previous migration was already complete and correct).
+
+---
+Task ID: A4
+Agent: admin-tab-builder
+Task: Build the AdminTab (User Management Dashboard) frontend component
+
+Work Log:
+- Read worklog.md, api-hooks.ts (admin hooks: useAdminStats, useAdminUsers, useAdminUpdateUser, useAdminDeleteUser + AdminUser type), dashboard-tab.tsx (visual quality reference), stat-card.tsx (StatCard API), format.ts (formatDate), and shadcn UI primitives (table, dropdown-menu, alert-dialog, avatar, badge, input, button)
+- Designed AdminTab as a three-section admin console: header, 6-card stats grid, user management card
+- Stats grid (grid-cols-2 lg:grid-cols-4): Total Users (emerald), New This Week (teal), Admins (amber), Banned Users (rose), Total Transactions (cyan), Total Accounts (slate) — all rendered with <StatCard>
+- User management: <Card> with header showing total/banned counts + filtered-count badge, search input (filters by name OR email client-side), and a sort dropdown (Newest / Oldest / Name A-Z) using DropdownMenuRadioGroup
+- Desktop uses shadcn <Table> with columns: User (avatar + name + email), Role (emerald Admin / slate User badge), Status (emerald Active / rose Banned badge), Joined (formatDate), Actions (kebab dropdown)
+- Mobile switches to a divide-y card layout with the same data, plus inline Role/Status badges and joined date in the footer
+- Avatars use a hash-based color picker over an 8-color palette (emerald, teal, cyan, amber, rose, orange, pink, lime) — NO indigo/blue/purple
+- Extracted reusable subcomponents: RoleBadge, StatusBadge, UserAvatar, UserActionsMenu — kept desktop and mobile markup DRY
+- Action menu items: Promote to Admin (emerald) / Demote to User (slate), Ban User (rose) / Unban User (emerald), Delete User (destructive variant) — each triggers a toast on success ("User promoted to admin", etc.) or surfaces the API error message via toast.error (covers the "cannot modify own account" 400 case)
+- Delete flow uses a controlled top-level <AlertDialog> (state = deleteTarget) so the dropdown closes cleanly first; dialog body states "This will permanently delete the user and ALL their financial data. This cannot be undone." and the confirm button uses destructive styling with a "Deleting…" pending state
+- Banned rows get a subtle rose tint (bg-rose-500/[0.04]) on both desktop table and mobile card
+- Loading: <Skeleton> placeholders for both the 6 stat cards and the user rows; Empty: friendly "No users found" state with a clear-search button when a search filter is active
+- Buttons disabled while mutations are pending (updateUser.isPending || deleteUser.isPending)
+- Verified with `bun run lint` — passed cleanly, no errors/warnings
+- Wrote ONLY /home/z/my-project/src/components/budget/tabs/admin-tab.tsx; no other files modified
+
+Stage Summary:
+- AdminTab is a named export starting with 'use client', fully self-contained
+- Emerald/teal primary theme with rose for banned/destructive and slate for plain users — no indigo/blue anywhere
+- Responsive mobile-first: 2-col stats on mobile → 4-col on desktop; table on md+ screens, card list on mobile
+- All 4 admin actions wired (promote/demote/ban/unban) with toast feedback; delete requires explicit confirmation
+- Matches dashboard-tab.tsx polish (stat cards, skeleton states, empty states, semantic colors, tabular layout)
+- API-driven: own-account protection handled by the API and surfaced via toast.error; no client-side session plumbing required
+
+---
+Task ID: A5
+Agent: auth-screen-builder
+Task: Build the `AuthScreen` component — a polished login/signup screen shown when the user is not authenticated
+
+Work Log:
+- Read worklog.md and all required context files (globals.css emerald/teal theme, dashboard-tab.tsx as visual reference, shadcn ui card/tabs/input/label/button/badge/separator)
+- Verified `next-auth` v4 + `next-auth/react` and `sonner` are present in package.json / node_modules
+- Designed a full-screen, two-column auth experience:
+  - Left hero panel (hidden on mobile, `lg:flex`): FinFlow brand (TrendingUp in rounded emerald→teal gradient square + wordmark), headline "Take control of your money." with gradient text accent, subheadline, 4 feature bullets (Wallet/Target/CreditCard/BarChart3 in tinted emerald chips), and a trust footer with two "Check" items separated by a vertical Separator
+  - Right auth card: `Card` with `p-6 sm:p-8`, emerald-tinted border + soft shadow + backdrop blur
+- Implemented shadcn `Tabs` with two tabs (Sign In / Create Account); switching tabs clears all errors
+- Sign-in form: email + password Inputs with proper Label/htmlFor, full-width primary Button with Loader2 spinner + "Signing in…" label and ArrowRight on idle, rose-colored error `<p role="alert">` when `signIn` returns `error` or throws. On success calls `toast.success('Welcome to FinFlow!')` and optional `onSuccess?.()`
+- Demo accounts info box below the sign-in form: emerald-tinted card with "Demo accounts — click to autofill" heading (Check icon). Each account is a focusable button with an emerald label badge + mono email + mono password; clicking calls `autofill()` which fills the sign-in fields and switches to the Sign In tab
+- Sign-up form: Name, Email, Password (≥6 chars), Confirm Password (must match) with inline `aria-invalid` styling + rose error text per field. Client validation via `EMAIL_RE` regex + length + match checks before any network call
+- Sign-up submit: POSTs to `/api/auth/signup`, parses `{ error }` on failure (shown as a form-level error), then on success calls `signIn('credentials', { email, password, redirect: false })` to auto-login. If auto-login succeeds → toast + `onSuccess`; if it fails → switches to Sign In tab with email prefilled + success toast
+- Accessibility: all inputs have associated `<Label htmlFor>`, all buttons have `aria-label`, error messages use `role="alert"`, invalid inputs use `aria-invalid`, full keyboard navigation via native form/button semantics, demo buttons have visible focus ring with emerald-tinted offset
+- Responsive: single column with centered card on mobile (`max-w-md mx-auto`), two-column `lg:grid-cols-2` on desktop; mobile shows a centered brand lockup, desktop shows the full hero
+- Theme discipline: emerald/teal gradients throughout, NO indigo/blue. Dark mode supported via `dark:` variants on every tinted surface. Decorative gradient blobs (emerald/teal) positioned absolutely with blur for depth
+- Lint: `bun run lint` passes with zero errors/warnings
+- Dev server compiles cleanly (verified `dev.log`)
+
+Stage Summary:
+- `src/components/budget/auth-screen.tsx` is complete and production-ready
+- Component exports `AuthScreen` (named export) with optional `onSuccess?: () => void` prop
+- Uses only existing shadcn/ui primitives + lucide icons + next-auth/react `signIn` + sonner toast — no new dependencies, no API routes, no DB changes
+- Premium SaaS look suitable for Etsy storefront: gradient hero, brand lockup, feature bullets, polished auth card with tabs, demo autofill, full validation, dark mode, responsive
+- Ready for parent to render `<AuthScreen onSuccess={...} />` when session is unauthenticated; session auto-updates on successful auth
+
+---
+Task ID: AUTH
+Agent: main
+Task: Multi-user SaaS — user accounts, per-user data isolation, admin-only account creation
+
+Work Log:
+- Installed bcryptjs; added NEXTAUTH_SECRET to .env
+- Created src/lib/auth.ts (NextAuth Credentials provider, bcrypt-verified against Firestore `users` collection)
+- Created src/lib/session.ts (requireUser / requireAdmin helpers)
+- Created src/types/next-auth.d.ts (augmented session/JWT with id + role)
+- Created [...nextauth] route handler; added SessionProvider to providers.tsx
+- Migrated ALL 22 API routes to require auth + scope by userId:
+  * Every collection doc now carries a `userId` field
+  * All queries filter by `userId` (single-field, no composite index needed)
+  * create operations stamp `userId` from the session
+  * [id] routes verify ownership before PUT/DELETE
+- Fixed Firestore composite-index errors: replaced all getWhereMulti (multi-field) calls with single-field getWhere('userId') + in-memory filtering. Per-user volume is small so this is efficient and avoids manual index creation.
+- Removed public signup route (/api/auth/signup) — accounts are admin-created only
+- Created /api/admin/users/create (admin-only: creates user with bcrypt-hashed password, copies default categories)
+- Created /api/admin/users (GET list, PUT ban/unban/promote/demote, DELETE user + all their data)
+- Created /api/admin/stats (totalUsers, bannedUsers, adminUsers, newThisWeek, totals)
+- Updated seed route: creates admin@finflow.app/admin123 + demo@finflow.app/demo123, scopes all sample data to demo user
+- Built AuthScreen (sign-in only, no signup tab, demo-account autofill, "accounts are created by the administrator" notice)
+- Built AdminTab (stats grid + user table with search/sort + ban/unban/promote/demote/delete + Create User dialog)
+- Updated app-shell: user menu (avatar + name + email), sign-out, admin nav item (gated by role)
+- Updated page.tsx: Firestore probe → session check → AuthScreen or AppShell(isAdmin)
+- bun run lint → 0 errors
+- Agent Browser verified end-to-end:
+  * Auth screen shows only "Sign In" (no Create Account tab) + admin-managed notice
+  * Demo user login → dashboard renders all 7 sections (no errors)
+  * Admin login → Admin Console nav appears, admin tab shows 2 users + stats
+  * Admin clicked "Create User" → created "Test Buyer" (buyer@test.com) → appeared in table (count 2→3)
+  * Signed out → logged in as Test Buyer → dashboard renders (new user, default categories, empty data)
+  * Data isolation confirmed: Test Buyer sees only their own data, not demo user's
+
+Stage Summary:
+- Full multi-user SaaS with Firebase Firestore backend
+- User accounts: admin-created only (no public signup), bcrypt-hashed passwords, NextAuth JWT sessions
+- Per-user data isolation: every document carries userId, all queries scoped to the session user
+- Admin Console: create/ban/unban/promote/demote/delete users, platform stats, user search
+- Demo credentials: admin@finflow.app/admin123 · demo@finflow.app/demo123
+- All Firestore queries use single-field indexes only (no manual composite-index setup needed)

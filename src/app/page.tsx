@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { AppShell } from '@/components/budget/app-shell'
 import { useBudgetStore } from '@/lib/store'
 import { DashboardTab } from '@/components/budget/tabs/dashboard-tab'
@@ -11,10 +12,12 @@ import { SavingsTab } from '@/components/budget/tabs/savings-tab'
 import { DebtTab } from '@/components/budget/tabs/debt-tab'
 import { ReportsTab } from '@/components/budget/tabs/reports-tab'
 import { BillsTab } from '@/components/budget/tabs/bills-tab'
+import { AdminTab } from '@/components/budget/tabs/admin-tab'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FirestoreSetupScreen } from '@/components/budget/firestore-setup-screen'
+import { AuthScreen } from '@/components/budget/auth-screen'
 
-function TabRouter() {
+function TabRouter({ isAdmin }: { isAdmin: boolean }) {
   const activeTab = useBudgetStore((s) => s.activeTab)
   switch (activeTab) {
     case 'dashboard': return <DashboardTab />
@@ -25,18 +28,16 @@ function TabRouter() {
     case 'debt': return <DebtTab />
     case 'reports': return <ReportsTab />
     case 'bills': return <BillsTab />
+    case 'admin': return isAdmin ? <AdminTab /> : <DashboardTab />
     default: return <DashboardTab />
   }
 }
 
-type Status = 'checking' | 'ready' | 'setup-required'
+type FsStatus = 'checking' | 'ready' | 'setup-required'
 
-/** Probe Firestore connectivity and auto-seed on first run. Returns the resulting status. */
-async function probeAndSeed(): Promise<Status> {
+/** Probe Firestore connectivity and auto-seed users on first run. */
+async function probeAndSeed(): Promise<FsStatus> {
   try {
-    // Firestore requests can hang for a long time when the API is disabled
-    // (the SDK retries internally). Abort after 9s so the setup screen shows
-    // promptly instead of leaving the user on a spinner.
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 9000)
     const res = await fetch('/api/seed', { cache: 'no-store', signal: controller.signal })
@@ -57,16 +58,14 @@ async function probeAndSeed(): Promise<Status> {
 }
 
 export default function Home() {
-  const [status, setStatus] = useState<Status>('checking')
+  const [fsStatus, setFsStatus] = useState<FsStatus>('checking')
   const [retrying, setRetrying] = useState(false)
+  const { data: session, status: sessionStatus } = useSession()
 
-  // Run the connectivity probe + auto-seed on mount. setState happens in the
-  // async callback (not synchronously in the effect body), which is the
-  // React-recommended pattern for syncing with external systems.
   useEffect(() => {
     let cancelled = false
     probeAndSeed().then((s) => {
-      if (!cancelled) setStatus(s)
+      if (!cancelled) setFsStatus(s)
     })
     return () => {
       cancelled = true
@@ -76,11 +75,12 @@ export default function Home() {
   async function handleRetry() {
     setRetrying(true)
     const s = await probeAndSeed()
-    setStatus(s)
+    setFsStatus(s)
     setRetrying(false)
   }
 
-  if (status === 'checking') {
+  // 1. Firestore not ready yet
+  if (fsStatus === 'checking') {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto space-y-4">
@@ -97,13 +97,29 @@ export default function Home() {
     )
   }
 
-  if (status === 'setup-required') {
+  if (fsStatus === 'setup-required') {
     return <FirestoreSetupScreen onRetry={handleRetry} retrying={retrying} />
   }
 
+  // 2. Firestore ready — check auth state
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Skeleton className="h-10 w-32" />
+      </div>
+    )
+  }
+
+  // 3. Not authenticated → show login/signup
+  if (!session) {
+    return <AuthScreen />
+  }
+
+  // 4. Authenticated → show the app (admin tab gated by role)
+  const isAdmin = session.user.role === 'admin'
   return (
-    <AppShell>
-      <TabRouter />
+    <AppShell isAdmin={isAdmin} userName={session.user.name ?? session.user.email} userEmail={session.user.email}>
+      <TabRouter isAdmin={isAdmin} />
     </AppShell>
   )
 }

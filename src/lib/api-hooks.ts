@@ -288,3 +288,45 @@ export function useUpdateWeeklyCheckin() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['weekly-checkin'] }); qc.invalidateQueries({ queryKey: ['dashboard'] }) },
   })
 }
+
+// ---------- Admin ----------
+export function useAdminStats() {
+  return useQuery({ queryKey: ['admin-stats'], queryFn: () => fetchJson<{ totalUsers: number; bannedUsers: number; adminUsers: number; newThisWeek: number; totalAccounts: number; totalTransactions: number; totalCategories: number; totalSavingsGoals: number; totalDebts: number; totalBills: number }>('/api/admin/stats') })
+}
+export interface AdminUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  createdAt: string
+  bannedAt: string | null
+  banned: boolean
+}
+export function useAdminUsers() {
+  return useQuery({ queryKey: ['admin-users'], queryFn: () => fetchJson<AdminUser[]>('/api/admin/users') })
+}
+export function useAdminUpdateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { id: string; action: 'promote' | 'demote' | 'ban' | 'unban' }) =>
+      fetchJson('/api/admin/users', { method: 'PUT', body: JSON.stringify(data) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-users'] }); qc.invalidateQueries({ queryKey: ['admin-stats'] }) },
+  })
+}
+export function useAdminDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => fetchJson(`/api/admin/users?id=${id}`, { method: 'DELETE' }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-users'] }); qc.invalidateQueries({ queryKey: ['admin-stats'] }) },
+  })
+}
+
+// Admin: create a new user (admin-only account creation)
+export function useAdminCreateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; email: string; password: string; role?: 'user' | 'admin' }) =>
+      fetchJson('/api/admin/users/create', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-users'] }); qc.invalidateQueries({ queryKey: ['admin-stats'] }) },
+  })
+}

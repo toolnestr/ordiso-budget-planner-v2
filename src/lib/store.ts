@@ -12,6 +12,7 @@ export type TabId =
   | 'debt'
   | 'reports'
   | 'bills'
+  | 'admin'
 
 interface BudgetStore {
   activeTab: TabId

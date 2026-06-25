@@ -1,20 +1,22 @@
 'use client'
 
 import { useState, useSyncExternalStore } from 'react'
+import { signOut } from 'next-auth/react'
 import {
   LayoutDashboard, Settings, Wallet, Receipt, Target, CreditCard, BarChart3, CalendarClock,
-  Menu, Moon, Sun, Sparkles, TrendingUp, ChevronLeft, ChevronRight,
+  Menu, Moon, Sun, TrendingUp, ChevronLeft, ChevronRight, LogOut, Shield,
 } from 'lucide-react'
 import { useBudgetStore, type TabId } from '@/lib/store'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { useSettings, useSeed } from '@/lib/api-hooks'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useSettings } from '@/lib/api-hooks'
 import { monthName } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
-const NAV_ITEMS: { id: TabId; label: string; icon: typeof LayoutDashboard; desc: string }[] = [
+const USER_NAV: { id: TabId; label: string; icon: typeof LayoutDashboard; desc: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, desc: 'Financial overview' },
   { id: 'budget', label: 'Monthly Budget', icon: Wallet, desc: 'Plan & track spending' },
   { id: 'transactions', label: 'Transactions', icon: Receipt, desc: 'Log daily spending' },
@@ -27,7 +29,6 @@ const NAV_ITEMS: { id: TabId; label: string; icon: typeof LayoutDashboard; desc:
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
-  // useSyncExternalStore is the React-recommended hydration-safe mount check
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -41,12 +42,20 @@ function ThemeToggle() {
   )
 }
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function NavList({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => void }) {
   const activeTab = useBudgetStore((s) => s.activeTab)
   const setActiveTab = useBudgetStore((s) => s.setActiveTab)
+  const items = isAdmin ? [...USER_NAV, { id: 'admin' as TabId, label: 'Admin Console', icon: Shield, desc: 'Manage users' }] : USER_NAV
   return (
     <nav className="flex flex-col gap-1 px-3">
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const Icon = item.icon
         const active = activeTab === item.id
         return (
@@ -57,7 +66,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
               'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
               active
                 ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+              item.id === 'admin' && !active && 'text-amber-600 dark:text-amber-400'
             )}
           >
             <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-accent-foreground')} />
@@ -102,24 +112,51 @@ function MonthNav() {
   )
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function UserMenu({ userName, userEmail, isAdmin }: { userName: string; userEmail: string; isAdmin: boolean }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors" aria-label="User menu">
+          <Avatar className="h-7 w-7">
+            <AvatarFallback className={cn('text-xs font-semibold', isAdmin ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-primary/15 text-primary')}>
+              {initials(userName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="hidden sm:flex flex-col items-start min-w-0 max-w-[140px]">
+            <span className="text-xs font-medium truncate w-full text-left">{userName}</span>
+            <span className="text-[10px] text-muted-foreground truncate w-full text-left">{userEmail}</span>
+          </div>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium truncate">{userName}</span>
+          <span className="text-xs text-muted-foreground font-normal truncate">{userEmail}</span>
+          {isAdmin && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">Administrator</span>}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })} className="text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 cursor-pointer">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+export function AppShell({
+  children,
+  isAdmin,
+  userName,
+  userEmail,
+}: {
+  children: React.ReactNode
+  isAdmin: boolean
+  userName: string
+  userEmail: string
+}) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const activeTab = useBudgetStore((s) => s.activeTab)
-  const seed = useSeed()
-  const [seeding, setSeeding] = useState(false)
-
-  const handleSeed = async () => {
-    setSeeding(true)
-    try {
-      const res = await seed.mutateAsync()
-      toast.success((res as { message?: string })?.message ?? 'Sample data loaded!')
-    } catch (e) {
-      toast.error('Failed to seed: ' + (e as Error).message)
-    } finally {
-      setSeeding(false)
-    }
-  }
-
   const showMonthNav = ['dashboard', 'budget', 'transactions'].includes(activeTab)
 
   return (
@@ -134,7 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SheetHeader className="text-left">
               <SheetTitle asChild><div><Brand /></div></SheetTitle>
             </SheetHeader>
-            <div className="mt-2"><NavList onNavigate={() => setMobileOpen(false)} /></div>
+            <div className="mt-2"><NavList isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} /></div>
           </SheetContent>
         </Sheet>
         <div className="flex items-center gap-2">
@@ -143,28 +180,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-bold text-sm">FinFlow</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <UserMenu userName={userName} userEmail={userEmail} isAdmin={isAdmin} />
+        </div>
       </header>
 
       <div className="flex flex-1">
         {/* Desktop sidebar */}
         <aside className="hidden md:flex md:w-64 lg:w-72 flex-col border-r bg-sidebar/50 shrink-0 sticky top-0 h-screen">
           <Brand />
-          <NavList />
-          <div className="mt-auto p-4 space-y-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full gap-2"
-              onClick={handleSeed}
-              disabled={seeding}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {seeding ? 'Loading…' : 'Load Sample Data'}
-            </Button>
-            <p className="text-[10px] text-muted-foreground text-center px-2">
-              Your data stays private in your browser.
-            </p>
+          <NavList isAdmin={isAdmin} />
+          <div className="mt-auto p-3 border-t">
+            <UserMenu userName={userName} userEmail={userEmail} isAdmin={isAdmin} />
           </div>
         </aside>
 
@@ -174,13 +202,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* Desktop contextual header */}
             <div className="hidden md:flex items-center justify-between mb-6">
               {showMonthNav ? <MonthNav /> : <div />}
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-2" onClick={handleSeed} disabled={seeding}>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {seeding ? 'Loading…' : 'Sample Data'}
-                </Button>
-                <ThemeToggle />
-              </div>
+              <ThemeToggle />
             </div>
             {/* Mobile month nav */}
             {showMonthNav && (
@@ -195,7 +217,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p>© {new Date().getFullYear()} FinFlow Budget Planner. Take control of your money.</p>
               <p className="flex items-center gap-1.5">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Auto-saving your progress locally
+                Signed in as {userName}
               </p>
             </div>
           </footer>

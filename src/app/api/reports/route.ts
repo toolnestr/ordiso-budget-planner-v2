@@ -1,11 +1,15 @@
-import { getAll, getWhereMulti } from '@/lib/firestore'
+import { getWhere } from '@/lib/firestore'
 import { ok, serialize, monthRange } from '@/lib/api'
+import { requireUser } from '@/lib/session'
 import { monthShort } from '@/lib/format'
 import type { Transaction, Category } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
+  const user = await requireUser()
+  if (!user) return ok({ unauthorized: true }, { status: 401 })
+
   const url = new URL(req.url)
   const now = new Date()
   const year = Number(url.searchParams.get('year')) || now.getFullYear()
@@ -13,18 +17,19 @@ export async function GET(req: Request) {
   const start = new Date(year, 0, 1)
   const end = new Date(year + 1, 0, 1)
 
-  const [txs, categories] = await Promise.all([
-    getWhereMulti<Transaction>('transactions', [
-      { field: 'date', op: '>=', value: start.toISOString() },
-      { field: 'date', op: '<', value: end.toISOString() },
-    ]),
-    getAll<Category>('categories'),
+  // Fetch by userId only (single-field, no composite index), filter by year in memory.
+  const [allTxs, categories] = await Promise.all([
+    getWhere<Transaction>('transactions', 'userId', '==', user.userId),
+    getWhere<Category>('categories', 'userId', '==', user.userId),
   ])
   const catMap = new Map(categories.map((c) => [c.id, c]))
+  const txs = allTxs.filter((t) => {
+    const d = new Date(t.date)
+    return d >= start && d < end
+  })
   const topOnly = txs.filter((t) => !t.parentTransactionId)
   const txsWithCat = topOnly.map((t) => ({ ...t, category: t.categoryId ? catMap.get(t.categoryId) ?? null : null }))
 
-  // Monthly trend
   const monthlyTrend: { month: string; monthNum: number; income: number; expenses: number; savings: number; netWorth: number }[] = []
   for (let m = 1; m <= 12; m++) {
     const { start: ms, end: me } = monthRange(m, year)
@@ -37,14 +42,12 @@ export async function GET(req: Request) {
     monthlyTrend.push({ month: monthShort(m), monthNum: m, income, expenses, savings: income - expenses, netWorth: 0 })
   }
 
-  // Running net worth (cumulative savings)
   let cumulative = 0
   for (const mt of monthlyTrend) {
     cumulative += mt.savings
     mt.netWorth = cumulative
   }
 
-  // Category heatmap (top 10 expense categories x 12 months)
   const categoryAgg = new Map<string, { category: string; color: string; icon: string; months: number[] }>()
   for (let m = 1; m <= 12; m++) {
     const { start: ms, end: me } = monthRange(m, year)
@@ -64,7 +67,6 @@ export async function GET(req: Request) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)
 
-  // Year-end summary
   const totalIncome = monthlyTrend.reduce((s, m) => s + m.income, 0)
   const totalExpenses = monthlyTrend.reduce((s, m) => s + m.expenses, 0)
   const totalSaved = totalIncome - totalExpenses

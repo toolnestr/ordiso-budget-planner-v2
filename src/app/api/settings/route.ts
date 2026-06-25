@@ -1,14 +1,18 @@
 import { getById, upsertDoc } from '@/lib/firestore'
 import { ok, err, serialize } from '@/lib/api'
+import { requireUser } from '@/lib/session'
 import type { Settings } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 const COLL = 'settings'
-const ID = 'singleton'
+
+function settingsDocId(userId: string) {
+  return `singleton_${userId}`
+}
 
 const DEFAULTS: Settings = {
-  id: ID,
+  id: 'singleton',
   currencySymbol: '$',
   currencyCode: 'USD',
   cashEnvelopeMode: false,
@@ -18,16 +22,25 @@ const DEFAULTS: Settings = {
 }
 
 export async function GET() {
-  let s = await getById<Settings>(COLL, ID)
+  const user = await requireUser()
+  if (!user) return err('Unauthorized', 401)
+
+  const id = settingsDocId(user.userId)
+  let s = await getById<Settings>(COLL, id)
   if (!s) {
-    s = await upsertDoc<Settings>(COLL, ID, DEFAULTS)
+    s = await upsertDoc<Settings>(COLL, id, { ...DEFAULTS, userId: user.userId })
   }
   return ok(serialize(s))
 }
 
 export async function PUT(req: Request) {
+  const user = await requireUser()
+  if (!user) return err('Unauthorized', 401)
+
   const body = await req.json()
-  const s = await upsertDoc<Partial<Settings>>(COLL, ID, {
+  const id = settingsDocId(user.userId)
+  const s = await upsertDoc<Partial<Settings> & { userId: string }>(COLL, id, {
+    userId: user.userId,
     currencySymbol: body.currencySymbol,
     currencyCode: body.currencyCode,
     cashEnvelopeMode: body.cashEnvelopeMode,
