@@ -90,7 +90,7 @@ function Brand() {
         <TrendingUp className="h-5 w-5" />
       </div>
       <div className="min-w-0">
-        <p className="font-bold text-base leading-tight truncate">{settings?.plannerName ?? 'FinFlow'}</p>
+        <p className="font-bold text-base leading-tight truncate">{settings?.plannerName ?? 'Ordiso'}</p>
         <p className="text-[11px] text-muted-foreground">Budget Planner</p>
       </div>
     </div>
@@ -178,7 +178,7 @@ export function AppShell({
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <TrendingUp className="h-4 w-4" />
           </div>
-          <span className="font-bold text-sm">FinFlow</span>
+          <span className="font-bold text-sm">Ordiso</span>
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />
@@ -214,7 +214,7 @@ export function AppShell({
           {/* Sticky footer */}
           <footer className="mt-auto border-t bg-card/50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-              <p>© {new Date().getFullYear()} FinFlow Budget Planner. Take control of your money.</p>
+              <p>© {new Date().getFullYear()} Ordiso Budget Planner. Take control of your money.</p>
               <p className="flex items-center gap-1.5">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Signed in as {userName}

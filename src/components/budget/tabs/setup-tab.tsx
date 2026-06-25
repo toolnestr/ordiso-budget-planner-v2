@@ -12,6 +12,7 @@ import {
   useIncomeSources, useCreateIncome, useUpdateIncome, useDeleteIncome,
 } from '@/lib/api-hooks'
 import { colorHex, COLOR_KEYS, CATEGORY_ICONS } from '@/lib/format'
+import { CURRENCIES, OTHER_KEY, findCurrency } from '@/lib/currencies'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type {
@@ -215,6 +216,13 @@ function SettingsForm({ settings }: { settings: Settings }) {
   const [cashEnvelopeMode, setCashEnvelopeMode] = useState(settings.cashEnvelopeMode ?? false)
   const [weeklyCheckinDay, setWeeklyCheckinDay] = useState(settings.weeklyCheckinDay ?? 0)
 
+  // Currency dropdown: pre-fill if the saved symbol+code matches a known currency,
+  // otherwise fall back to "Other" with the custom values shown in text inputs.
+  const savedCurrency = findCurrency(currencySymbol, currencyCode)
+  const [currencySelect, setCurrencySelect] = useState<string>(
+    savedCurrency ? savedCurrency.code : OTHER_KEY
+  )
+
   const handleSave = () => {
     updateSettings.mutate(
       { plannerName, currencySymbol, currencyCode, cashEnvelopeMode, weeklyCheckinDay },
@@ -223,6 +231,18 @@ function SettingsForm({ settings }: { settings: Settings }) {
         onError: (e) => toast.error(e.message),
       },
     )
+  }
+
+  // When a known currency is chosen, auto-fill both symbol + code.
+  // "Other" leaves the custom symbol/code inputs editable.
+  const handleCurrencySelect = (value: string) => {
+    setCurrencySelect(value)
+    if (value === OTHER_KEY) return
+    const c = CURRENCIES.find((x) => x.code === value)
+    if (c) {
+      setCurrencySymbol(c.symbol)
+      setCurrencyCode(c.code)
+    }
   }
 
   const handleToggleCash = (checked: boolean) => {
@@ -262,25 +282,54 @@ function SettingsForm({ settings }: { settings: Settings }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="currencySymbol">Currency Symbol</Label>
-          <Input
-            id="currencySymbol"
-            value={currencySymbol}
-            onChange={(e) => setCurrencySymbol(e.target.value)}
-            maxLength={3}
-            placeholder="$"
-          />
+          <Label htmlFor="currencySelect">Currency</Label>
+          <Select value={currencySelect} onValueChange={handleCurrencySelect}>
+            <SelectTrigger id="currencySelect" className="w-full">
+              <SelectValue placeholder="Select your currency" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {CURRENCIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.label}
+                </SelectItem>
+              ))}
+              <SelectItem value={OTHER_KEY}>Other (custom)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="currencyCode">Currency Code</Label>
-          <Input
-            id="currencyCode"
-            value={currencyCode}
-            onChange={(e) => setCurrencyCode(e.target.value.toUpperCase())}
-            maxLength={4}
-            placeholder="USD"
-          />
-        </div>
+        {currencySelect === OTHER_KEY && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="currencySymbol">Custom Symbol</Label>
+              <Input
+                id="currencySymbol"
+                value={currencySymbol}
+                onChange={(e) => setCurrencySymbol(e.target.value)}
+                maxLength={5}
+                placeholder="$"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="currencyCode">Custom Code</Label>
+              <Input
+                id="currencyCode"
+                value={currencyCode}
+                onChange={(e) => setCurrencyCode(e.target.value.toUpperCase())}
+                maxLength={5}
+                placeholder="USD"
+              />
+            </div>
+          </>
+        )}
+        {currencySelect !== OTHER_KEY && (
+          <div className="space-y-1.5 sm:col-span-1 lg:col-span-2 flex items-end">
+            <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground w-full">
+              Symbol <span className="font-mono font-semibold text-foreground">{currencySymbol}</span>
+              {' · '}
+              Code <span className="font-mono font-semibold text-foreground">{currencyCode}</span>
+            </div>
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="weeklyCheckinDay">Weekly Check-in Day</Label>
           <Select value={String(weeklyCheckinDay)} onValueChange={(v) => setWeeklyCheckinDay(Number(v))}>

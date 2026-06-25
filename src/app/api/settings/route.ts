@@ -18,7 +18,7 @@ const DEFAULTS: Settings = {
   cashEnvelopeMode: false,
   weeklyCheckinDay: 0,
   setupComplete: false,
-  plannerName: 'FinFlow Planner',
+  plannerName: 'Ordiso Planner',
 }
 
 export async function GET() {

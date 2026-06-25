@@ -67,14 +67,14 @@ export async function POST() {
 
     const admin = await createAuto<{ name: string; email: string; hashedPassword: string; role: string; createdAt: string }>('users', {
       name: 'Admin',
-      email: 'admin@finflow.app',
+      email: 'admin@ordiso.app',
       hashedPassword: adminHash,
       role: 'admin',
       createdAt: now.toISOString(),
     })
     const demo = await createAuto<{ name: string; email: string; hashedPassword: string; role: string; createdAt: string }>('users', {
       name: 'Demo User',
-      email: 'demo@finflow.app',
+      email: 'demo@ordiso.app',
       hashedPassword: demoHash,
       role: 'user',
       createdAt: now.toISOString(),
@@ -95,7 +95,7 @@ export async function POST() {
       cashEnvelopeMode: false,
       weeklyCheckinDay: 0,
       setupComplete: true,
-      plannerName: 'FinFlow Planner',
+      plannerName: 'Ordiso Planner',
     })
 
     // Accounts
@@ -232,7 +232,7 @@ export async function POST() {
     return ok({
       success: true,
       message: `Seeded admin + demo user with ${monthName(curMonth)} ${curYear} data.`,
-      credentials: { admin: { email: 'admin@finflow.app', password: 'admin123' }, demo: { email: 'demo@finflow.app', password: 'demo123' } },
+      credentials: { admin: { email: 'admin@ordiso.app', password: 'admin123' }, demo: { email: 'demo@ordiso.app', password: 'demo123' } },
     })
   } catch (e) {
     return err(`Seed failed: ${(e as Error).message}`, 500)

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FinFlow — Personal Budget Planner",
+  title: "Ordiso — Personal Budget Planner",
   description: "A beautiful, automated personal finance command center. Track income, expenses, savings goals, debt payoff, and subscriptions all in one place.",
   keywords: ["budget planner", "personal finance", "expense tracker", "savings goal", "debt payoff"],
 };

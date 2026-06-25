@@ -17,8 +17,7 @@ interface AuthScreenProps {
 }
 
 const DEMO_ACCOUNTS: { label: string; email: string; password: string }[] = [
-  { label: 'Admin', email: 'admin@finflow.app', password: 'admin123' },
-  { label: 'Demo User', email: 'demo@finflow.app', password: 'demo123' },
+  { label: 'Demo', email: 'demo@ordiso.app', password: 'demo123' },
 ]
 
 const FEATURES: { icon: typeof Wallet; title: string; desc: string }[] = [
@@ -57,7 +56,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
       if (res?.error) {
         setError('Invalid email or password.')
       } else if (res?.ok) {
-        toast.success('Welcome to FinFlow!')
+        toast.success('Welcome to Ordiso!')
         onSuccess?.()
       } else {
         setError('Something went wrong. Please try again.')
@@ -86,7 +85,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
                 <TrendingUp className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold tracking-tight">FinFlow</p>
+                <p className="text-2xl font-bold tracking-tight">Ordiso</p>
                 <p className="text-xs text-muted-foreground">Budget Planner</p>
               </div>
             </div>
@@ -138,7 +137,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/30">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
-              <p className="text-xl font-bold tracking-tight">FinFlow</p>
+              <p className="text-xl font-bold tracking-tight">Ordiso</p>
             </div>
 
             <Card className="border-emerald-100/60 p-6 shadow-xl shadow-emerald-900/5 backdrop-blur-sm dark:border-emerald-900/30 sm:p-8">
@@ -240,7 +239,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
             </Card>
 
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              © {new Date().getFullYear()} FinFlow · Built for people who care about their money
+              © {new Date().getFullYear()} Ordiso · Built for people who care about their money
             </p>
           </div>
         </div>

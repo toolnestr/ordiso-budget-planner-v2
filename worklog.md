@@ -431,3 +431,30 @@ Stage Summary:
 - Admin Console: create/ban/unban/promote/demote/delete users, platform stats, user search
 - Demo credentials: admin@finflow.app/admin123 · demo@finflow.app/demo123
 - All Firestore queries use single-field indexes only (no manual composite-index setup needed)
+
+---
+Task ID: CURRENCY-RENAME
+Agent: main
+Task: Currency dropdown with country names + auto code, remove admin demo, rename to Ordiso
+
+Work Log:
+- Created src/lib/currencies.ts — 45+ currencies with symbol, ISO code, country name, and a formatted label ("United States — USD ($)"). Includes an OTHER_KEY sentinel and findCurrency() helper.
+- Updated Setup tab SettingsForm:
+  * Replaced the two plain text inputs (symbol + code) with a single "Currency" <Select> dropdown listing all currencies by country — code (symbol).
+  * Selecting a currency auto-fills both currencySymbol and currencyCode state (and the info box displays the active symbol/code).
+  * An "Other (custom)" option at the bottom of the list reveals editable "Custom Symbol" + "Custom Code" text inputs for currencies not in the list.
+  * On load, the dropdown pre-selects the matching currency if the saved symbol+code pair is known, otherwise defaults to "Other".
+- Auth screen: removed the "Admin" demo account from the click-to-fill box; only "Demo" (demo@ordiso.app / demo123) remains.
+- Renamed FinFlow → Ordiso across all source files (layout title, app-shell brand, auth screen hero, settings defaults, seed route, dashboard defaults) and updated demo/admin email domains from finflow.app → ordiso.app.
+- bun run lint → 0 errors
+- Re-seeded the database with the new ordiso.app emails.
+- Agent Browser verified:
+  * Login screen shows "Ordiso" brand, only one "Demo" autofill button (no Admin), no admin@ email visible.
+  * Setup tab currency dropdown opens with 45+ currencies (United States — USD ($), Eurozone — EUR (€), Pakistan — PKR (₨), etc.) + "Other (custom)" at the bottom.
+  * Selecting "Pakistan — PKR (₨)" auto-filled symbol ₨ and code PKR (shown in the info box).
+  * Selecting "Other (custom)" revealed editable Custom Symbol + Custom Code inputs.
+
+Stage Summary:
+- Currency picker is now a searchable dropdown of 45+ world currencies with country names, auto-filling symbol + code; "Other" allows custom entry.
+- Login screen no longer exposes admin credentials; only the Demo account is shown.
+- Product renamed from FinFlow to Ordiso throughout (UI, metadata, seed data, email domains).

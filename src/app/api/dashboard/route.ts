@@ -47,7 +47,7 @@ function nextDueDate(bill: Bill, from: Date): { date: Date; dueInDays: number } 
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  id: 'singleton', currencySymbol: '$', currencyCode: 'USD', cashEnvelopeMode: false, weeklyCheckinDay: 0, setupComplete: false, plannerName: 'FinFlow Planner',
+  id: 'singleton', currencySymbol: '$', currencyCode: 'USD', cashEnvelopeMode: false, weeklyCheckinDay: 0, setupComplete: false, plannerName: 'Ordiso Planner',
 }
 
 export async function GET(req: Request) {
