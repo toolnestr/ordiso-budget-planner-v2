@@ -7,6 +7,9 @@ import {
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   type User as FbUser,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
@@ -26,6 +29,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (name: string, email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -92,8 +96,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fbSignOut(auth)
   }
 
+  /** Change the current user's password (requires recent login). */
+  async function changePassword(currentPassword: string, newPassword: string) {
+    const { reauthenticateWithCredential, EmailAuthProvider, updatePassword } = await import('firebase/auth')
+    const fbUser = auth.currentUser
+    if (!fbUser || !fbUser.email) throw new Error('Not signed in')
+    const cred = EmailAuthProvider.credential(fbUser.email, currentPassword)
+    await reauthenticateWithCredential(fbUser, cred)
+    if (newPassword.length < 6) throw new Error('New password must be at least 6 characters')
+    await updatePassword(fbUser, newPassword)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, changePassword }}>
       {children}
     </AuthContext.Provider>
   )

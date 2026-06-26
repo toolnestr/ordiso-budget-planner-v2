@@ -50,13 +50,20 @@ export function AuthScreen() {
       toast.success('Welcome to Ordiso!')
     } catch (err) {
       const code = (err as { code?: string }).code ?? ''
-      if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
-        setError('Invalid email or password.')
+      const msg = (err as { message?: string }).message ?? ''
+      if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-email')) {
+        setError('Invalid email or password. If this is your first visit, click "Load demo data" below first.')
       } else if (code.includes('too-many-requests')) {
-        setError('Too many attempts. Try again later.')
+        setError('Too many attempts. Try again in a minute.')
+      } else if (code.includes('network-request-failed') || code.includes('internal-error')) {
+        setError('Network error. Check your connection and try again.')
+      } else if (code.includes('api-key-not-valid') || code.includes('api-key/invalid')) {
+        setError('Firebase configuration error. Contact the administrator.')
       } else {
-        setError('Something went wrong. Please try again.')
+        // Show the raw Firebase code so we can diagnose unknown issues
+        setError(code ? `Login failed (${code}). If this is your first visit, click "Load demo data" below to create the demo accounts.` : 'Login failed. If this is your first visit, click "Load demo data" below to create the accounts.')
       }
+      console.error('Login error:', { code, message: msg })
     } finally {
       setLoading(false)
     }
@@ -223,9 +230,9 @@ export function AuthScreen() {
               {/* First-time setup: creates admin + demo users and sample data */}
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="mt-3 w-full text-xs gap-2 text-muted-foreground"
+                className="mt-3 w-full gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
                 disabled={seeding || loading}
                 onClick={async () => {
                   setSeeding(true)
@@ -234,7 +241,7 @@ export function AuthScreen() {
                     toast.info('Loading demo data… this takes ~10 seconds')
                     const { seedClient } = await import('@/lib/seed-client')
                     await seedClient()
-                    toast.success('Demo data loaded! You&apos;re now signed in as the demo user.')
+                    toast.success("Demo data loaded! You're now signed in as the demo user.")
                   } catch (e) {
                     setError('Could not load demo data: ' + (e as Error).message)
                     setSeeding(false)
@@ -242,7 +249,7 @@ export function AuthScreen() {
                 }}
               >
                 {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {seeding ? 'Loading demo data…' : 'First time? Load demo data'}
+                {seeding ? 'Loading demo data…' : 'First time? Click here to load demo data'}
               </Button>
             </Card>
 

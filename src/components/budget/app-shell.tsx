@@ -4,17 +4,21 @@ import { useState, useSyncExternalStore } from 'react'
 import { useAuth } from '@/lib/auth-client'
 import {
   LayoutDashboard, Settings, Wallet, Receipt, Target, CreditCard, BarChart3, CalendarClock,
-  Menu, Moon, Sun, TrendingUp, ChevronLeft, ChevronRight, LogOut, Shield,
+  Menu, Moon, Sun, TrendingUp, ChevronLeft, ChevronRight, LogOut, Shield, KeyRound, Loader2,
 } from 'lucide-react'
 import { useBudgetStore, type TabId } from '@/lib/store'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useSettings } from '@/lib/api-hooks'
 import { monthName } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 const USER_NAV: { id: TabId; label: string; icon: typeof LayoutDashboard; desc: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, desc: 'Financial overview' },
@@ -113,35 +117,107 @@ function MonthNav() {
 }
 
 function UserMenu({ userName, userEmail, isAdmin }: { userName: string; userEmail: string; isAdmin: boolean }) {
-  const { signOut } = useAuth()
+  const { signOut, changePassword } = useAuth()
+  const [pwOpen, setPwOpen] = useState(false)
+  const [curPw, setCurPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwError, setPwError] = useState<string | null>(null)
+  const [pwLoading, setPwLoading] = useState(false)
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setPwError(null)
+    if (!curPw || !newPw || !confirmPw) { setPwError('All fields are required.'); return }
+    if (newPw.length < 6) { setPwError('New password must be at least 6 characters.'); return }
+    if (newPw !== confirmPw) { setPwError('New passwords do not match.'); return }
+    setPwLoading(true)
+    try {
+      await changePassword(curPw, newPw)
+      toast.success('Password changed successfully')
+      setPwOpen(false)
+      setCurPw(''); setNewPw(''); setConfirmPw('')
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? ''
+      if (code.includes('wrong-password') || code.includes('invalid-credential')) {
+        setPwError('Current password is incorrect.')
+      } else if (code.includes('too-many-requests')) {
+        setPwError('Too many attempts. Try again later.')
+      } else if (code.includes('weak-password')) {
+        setPwError('New password is too weak. Use at least 6 characters.')
+      } else {
+        setPwError((err as Error).message || 'Could not change password.')
+      }
+    } finally {
+      setPwLoading(false)
+    }
+  }
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors min-h-[40px]" aria-label="User menu">
-          <Avatar className="h-7 w-7">
-            <AvatarFallback className={cn('text-xs font-semibold', isAdmin ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-primary/15 text-primary')}>
-              {initials(userName)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="hidden sm:flex flex-col items-start min-w-0 max-w-[140px]">
-            <span className="text-xs font-medium truncate w-full text-left">{userName}</span>
-            <span className="text-[10px] text-muted-foreground truncate w-full text-left">{userEmail}</span>
-          </div>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium truncate">{userName}</span>
-          <span className="text-xs text-muted-foreground font-normal truncate">{userEmail}</span>
-          {isAdmin && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">Administrator</span>}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()} className="text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 cursor-pointer">
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors min-h-[40px]" aria-label="User menu">
+            <Avatar className="h-7 w-7">
+              <AvatarFallback className={cn('text-xs font-semibold', isAdmin ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-primary/15 text-primary')}>
+                {initials(userName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden sm:flex flex-col items-start min-w-0 max-w-[140px]">
+              <span className="text-xs font-medium truncate w-full text-left">{userName}</span>
+              <span className="text-[10px] text-muted-foreground truncate w-full text-left">{userEmail}</span>
+            </div>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium truncate">{userName}</span>
+            <span className="text-xs text-muted-foreground font-normal truncate">{userEmail}</span>
+            {isAdmin && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">Administrator</span>}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => { setPwOpen(true); setPwError(null); setCurPw(''); setNewPw(''); setConfirmPw('') }} className="cursor-pointer">
+            <KeyRound className="h-4 w-4 mr-2" />
+            Change password
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => signOut()} className="text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 cursor-pointer">
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Change password dialog */}
+      <Dialog open={pwOpen} onOpenChange={setPwOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change password</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="cur-pw">Current password</Label>
+              <Input id="cur-pw" type="password" value={curPw} onChange={(e) => setCurPw(e.target.value)} autoComplete="current-password" autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pw">New password</Label>
+              <Input id="new-pw" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} autoComplete="new-password" placeholder="At least 6 characters" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-pw">Confirm new password</Label>
+              <Input id="confirm-pw" type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} autoComplete="new-password" />
+            </div>
+            {pwError && <p role="alert" className="text-sm font-medium text-rose-600 dark:text-rose-400">{pwError}</p>}
+            <DialogFooter>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={pwLoading}>Cancel</Button></DialogClose>
+              <Button type="submit" disabled={pwLoading} className="gap-2">
+                {pwLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                {pwLoading ? 'Saving…' : 'Update password'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
