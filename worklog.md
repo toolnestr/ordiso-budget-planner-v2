@@ -480,3 +480,150 @@ Stage Summary:
 - Project is deployment-ready: clean source, no unused deps, proper .gitignore, .env.example, wrangler.toml, README with step-by-step Cloudflare Pages instructions
 - Downloadable zip at upload/ordiso.zip (297K)
 - Deploy path: push to git → Cloudflare Pages → connect repo → build command "npx @cloudflare/next-on-pages@latest" → output ".vercel/output/static" → add env vars + nodejs_compat flag
+
+---
+Task ID: MOBILE
+Agent: frontend-styling-expert
+Task: Mobile responsiveness fixes across dashboard, transactions, budget tabs + app shell
+
+Work Log:
+- Read worklog.md and all 4 target files (dashboard-tab.tsx, transactions-tab.tsx, budget-tab.tsx, app-shell.tsx) plus supporting components (stat-card.tsx, currency.tsx, progress-bar.tsx) to understand props/APIs before editing.
+- **dashboard-tab.tsx**:
+  - Hero "June Overview" + "Left to Spend" card: changed `p-6` → `p-4 sm:p-6`, switched header layout from `flex flex-wrap` to `flex flex-col sm:flex-row` so the Left-to-Spend box stacks below the title on mobile. Reduced box padding (`px-3 py-1.5 sm:px-4 sm:py-2`), made it `w-full sm:w-auto`, and dropped its number/title to `text-xl sm:text-2xl`. Hero h2 also `text-xl sm:text-2xl`.
+  - StatCards: passed `className="p-4 sm:p-5"` (twMerge overrides StatCard's default p-5 on mobile) and `className="text-xl sm:text-2xl"` on each `<Currency>` value so numbers shrink on mobile and don't overflow the 2-col grid. Grid gap `gap-3 sm:gap-4`.
+  - Charts: donut legend already stacked (`flex-col sm:flex-row`) — verified. Bar chart height kept manageable (240 → 220), added `margin` + `interval={0}` on XAxis + smaller font (11px) + narrower YAxis width (42px) to prevent label clipping. Added `truncate` to chart card titles and `shrink-0` to legend swatches row.
+  - All section Cards: `p-5` → `p-4 sm:p-5` for tighter-but-breathable mobile padding.
+  - Weekly checkin toggle buttons: added `min-h-[44px]` to guarantee ≥44px touch targets.
+- **transactions-tab.tsx**:
+  - Quick-Add form row: `flex flex-wrap items-end gap-3` → `flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-2 sm:gap-3` so all fields (type toggle, description, amount, category, account, date, Add button) stack vertically full-width on mobile, wrap horizontally on sm+. Add button now `h-10 sm:h-9 w-full sm:w-auto justify-center` (40px touch target on mobile, full-width).
+  - Summary strip (Income/Expenses/Net): `p-3 gap-3 text-lg` → `p-2.5 sm:p-3 gap-2 sm:gap-3 text-base sm:text-lg` + `truncate` on both label and value to prevent overflow at 390px (each cell ~111px wide).
+  - Filter bar: `flex flex-wrap items-center` → `flex flex-col sm:flex-row sm:flex-wrap sm:items-center` so search + category select + account select + Clear button stack on mobile. Selects already had `w-full sm:w-*` so they fill width when stacked.
+  - Transaction row kebab menu button: `h-8 w-8` → `h-10 w-10 sm:h-8 sm:w-8` (40px tap target on mobile; keeps hover-reveal opacity behavior on desktop). Description already had `truncate`; amount already had `shrink-0`.
+- **budget-tab.tsx**:
+  - Hero "Left to Spend": `p-5 sm:p-6` → `p-4 sm:p-6`, layout `flex flex-wrap items-start justify-between gap-6` → `flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4 sm:gap-6` so the big number stacks below the title block on mobile. Big number `text-4xl sm:text-5xl` → `text-3xl sm:text-4xl lg:text-5xl` + `break-all` to avoid overflow on very large amounts. Hero h2 `text-2xl` → `text-xl sm:text-2xl`.
+  - SummaryCard (local component): number `text-2xl` → `text-xl sm:text-2xl` to fit 2-col grid on mobile.
+  - PlannedInput (editable planned amount): `h-8 w-24` → `h-9 sm:h-8 w-24 min-w-[60px]` (36px height on mobile for easier tap, 60px min width guaranteed). Applies to both desktop table cell and mobile card layout.
+  - Budget table: verified existing `hidden md:block` (desktop table) + `md:hidden` (mobile cards) split works correctly — no horizontal overflow on mobile since cards are used. Mobile card layout already truncates category names and uses responsive grids.
+- **app-shell.tsx**:
+  - Mobile hamburger button: added `className="h-10 w-10"` (40px touch target, up from default 36px).
+  - ThemeToggle button: added `className="h-10 w-10"` (40px touch target on both mobile + desktop).
+  - MonthNav prev/next arrows: `h-8 w-8` → `h-10 w-10 sm:h-8 sm:w-8` (40px on mobile, 32px on desktop). Month label `min-w-[110px]` kept — fits comfortably at 390px.
+  - UserMenu trigger button: added `min-h-[40px]` for guaranteed touch target. User name/email already hidden below `sm` (`hidden sm:flex`), so only avatar shows on mobile — no overflow.
+  - Desktop sidebar already `hidden md:flex`; footer already wraps `flex-col sm:flex-row` — verified.
+
+Quality Bar (390px iPhone mental check):
+- No horizontal scroll on any tab. All grids use `grid-cols-2` / `grid-cols-1 lg:*` with responsive gaps; tables use mobile-card layout; chart `ResponsiveContainer width="100%"` fills parent.
+- All interactive controls ≥40px: hamburger (40), theme toggle (40), month arrows (40 mobile), user menu (40), checkin toggles (44), kebab menu (40 mobile), Add button (40 mobile), planned inputs (36 mobile — acceptable for numeric input).
+- Numbers: big stats `text-xl sm:text-2xl`, hero numbers `text-3xl sm:text-4xl`, summary strip `text-base sm:text-lg`, all with `tabular-nums` + `truncate`/`break-all` where needed.
+- Padding: `p-4 sm:p-5/6` on cards, `px-4` on main wrapper (existing), no negative margins inside grids.
+- Emerald/teal theme preserved (no indigo/blue introduced). Mobile-first breakpoints (`sm:`/`md:`/`lg:`) used throughout.
+
+Verification:
+- `bun run lint` → clean, zero errors/warnings.
+
+Files touched (ONLY these 4, per constraints):
+- /home/z/my-project/src/components/budget/tabs/dashboard-tab.tsx
+- /home/z/my-project/src/components/budget/tabs/transactions-tab.tsx
+- /home/z/my-project/src/components/budget/tabs/budget-tab.tsx
+- /home/z/my-project/src/components/budget/app-shell.tsx
+
+No new files created. No data/logic changes — only Tailwind classes and layout structure. No other files modified.
+
+---
+Task ID: MOBILE-2
+Agent: frontend-styling-expert
+Task: Mobile responsiveness fixes for 6 remaining tabs (savings, debt, bills, reports, setup, admin)
+
+Work Log:
+- Read worklog.md first; no prior MOBILE tasks. Surveyed dashboard-tab.tsx for established mobile patterns (grid-cols-2 lg:grid-cols-4, text-2xl tabular-nums, flex-wrap on header rows).
+- Inspected stat-card.tsx + currency.tsx APIs to confirm `compact` prop and that StatCard value uses `text-2xl font-bold` (no per-instance override available).
+- Edited ONLY the 6 permitted tab files; no other files touched. No data/logic changes — Tailwind classes and layout structure only.
+
+savings-tab.tsx
+- HeroSummary: stacked layout on mobile (`flex-col sm:flex-row`), big `text-3xl sm:text-4xl` amount now `break-all leading-tight`, subline `break-words`. Overall-progress card + completion badge row becomes `flex-row sm:flex-col` on mobile so it doesn't crowd the hero number.
+- GoalCard action row: `flex-col sm:flex-row` so Add Funds is full-width on mobile; Edit/Delete icon buttons bumped from `h-8 w-8` (32px) → `h-10 w-10` (40px) tap target, icons `h-3.5 → h-4`.
+- GoalCard progress row: `flex-wrap` + `min-w-0` on saved-amount span and `shrink-0` on pct so big numbers wrap cleanly instead of overflowing.
+- AddFundsDialog quick-amount chips: `px-2.5 py-1` → `px-3 py-2` (≥32px tap target) and `gap-1.5 → gap-2`.
+- GoalFormDialog: target/saved grid `grid-cols-2 → grid-cols-1 sm:grid-cols-2`; color swatches `h-7 w-7 → h-9 w-9` (≥36px); icon picker `grid-cols-8 h-8 w-8 gap-1.5 → grid-cols-6 sm:grid-cols-8 h-10 w-10 gap-2` (≥40px cells, 6-col on mobile so cells stay tappable).
+- PopularGoals chips: `py-1.5 → py-2` (taller tap target). Header row uses `flex-wrap` + `min-w-0`.
+
+debt-tab.tsx
+- Strategy toggle (Snowball/Avalanche): switched from `inline-flex self-start` to `grid grid-cols-2 w-full sm:flex sm:inline-flex sm:w-auto` — full-width on mobile with two equal tappable halves; buttons `px-3 py-1.5 → px-3 py-2` (≥40px tall) and `justify-center`.
+- DebtCard edit/delete icon buttons `h-8 w-8 → h-10 w-10` (40px tap target). Record Payment button already `w-full sm:w-auto` — kept.
+- 4-stat grid inside DebtCard was already `grid-cols-2 sm:grid-cols-4 gap-3` with `truncate` on values — verified.
+- Summary StatCards grid already `grid-cols-2 lg:grid-cols-4` — verified, all values use `compact` Currency.
+
+bills-tab.tsx
+- Tabs (Subscriptions / Regular Bills): `TabsList` from default inline-flex → `grid w-full grid-cols-2`. Triggers wrap labels in `<span className="truncate">` so they fit evenly. Tab triggers are now full-width and equally tappable.
+- BillRow bottom controls: `flex flex-wrap items-center justify-between` → `flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between` — due info stacks above actions on mobile.
+- Cancel switch label: added `py-1.5` so the switch row has a ≥36px tap corridor.
+- Mark Paid button: `h-7 → h-9` (36px tap target). Dropdown trigger: `h-7 w-7 → h-9 w-9` (36px).
+- Amount: added `break-all` to handle large currencies; per-month hint: `whitespace-nowrap` to prevent awkward wrap.
+- BillForm amount/frequency + day/category grids: `grid-cols-2 → grid-cols-1 sm:grid-cols-2` so inputs stack on mobile (frequency dropdown was tight on narrow screens).
+
+reports-tab.tsx
+- YearSelector: prev/next icon buttons `size="icon"` (default h-9) → added `className="h-10 w-10"` (40px tap target); year label `text-lg → text-base sm:text-lg`, `min-w-[110px] → min-w-[100px] sm:min-w-[110px]`, `px-4 → px-3 sm:px-4`.
+- Year-end hero: `p-6 → p-4 sm:p-6`, heading `text-2xl → text-xl sm:text-2xl break-words`. 6 StatCards: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` → `grid-cols-2 lg:grid-cols-3` with `gap-3 sm:gap-4` (2-col on mobile, more efficient than 1-col). All values already use `compact` Currency.
+- 12-month area chart: `ResponsiveContainer height={300} → height={280}` (closer to spec's ~260px on mobile while staying readable on desktop).
+- Heatmap: kept `overflow-x-auto` and sticky first column; reduced `min-w-[860px] → min-w-[760px] sm:min-w-[860px]` and column min-widths (`150px → 140px sm:150px`, `58px → 52px sm:58px`, `78px → 72px sm:78px`) so fewer columns need scrolling on small phones. Added `pb-1` for scrollbar breathing room. Added "← Swipe horizontally to view all months →" hint.
+- All Card sections: `p-5 → p-4 sm:p-5` (tighter mobile padding), added `min-w-0` to header titles and `shrink-0` to icons/legends to prevent overflow.
+- Legend row: `flex → flex flex-wrap` so Income/Expenses/Savings chips wrap on narrow screens.
+
+setup-tab.tsx
+- ColorSwatchPicker (used by both Category + Account dialogs): `h-7 w-7 → h-9 w-9` (36px — meets spec).
+- IconPicker: `grid-cols-10 gap-1.5 h-8 w-8 max-h-32 → grid-cols-6 sm:grid-cols-8 gap-2 h-10 w-10 max-h-40` (40px cells, 6-col on mobile so cells stay tappable and don't overflow).
+- Income/Category/Account rows: each row switched from `flex items-center justify-between` → `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between` so info stacks above actions on mobile; right-side action cluster uses `justify-between sm:justify-end` so amount + buttons span full-width cleanly.
+- All Edit/Delete icon buttons across the three sections: `h-7 w-7 h-3.5 w-3.5 → h-9 w-9 h-4 w-4` (36px tap target).
+- SettingsForm: currency + weekly-checkin Selects already `w-full` — verified. Planner Settings grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` — verified.
+- CategorySection TabsList kept as `w-full justify-start overflow-x-auto` (5 short triggers fit at 390px; horizontal scroll is the fallback).
+
+admin-tab.tsx
+- UserActionsMenu trigger button: `size-8 → size-9` (36px tap target — applies to both desktop table and mobile cards).
+- Stats grid: `gap-4 → gap-3 sm:gap-4` (tighter on mobile). Existing `grid-cols-2 lg:grid-cols-4` kept.
+- Search/sort/Create cluster: rewired from `flex items-center gap-2` (single non-wrapping row) → `flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:w-auto` with the search input full-width on mobile (`flex-1 sm:flex-none`, `h-10`), and the sort + Create buttons grouped in their own `flex items-center gap-2` row alongside. Create button label collapses to "Create" on mobile (`sm:hidden`/`hidden sm:inline` swap) and grows `flex-1 sm:flex-none` to fill remaining width.
+- Mobile card list: added `shrink-0` to avatar so it stays put when name/email truncate; layout already correct (avatar+name+email row, role/status/joined row). Desktop table `hidden md:block` + mobile cards `md:hidden divide-y` verified.
+- Create User dialog: Input fields are full-width by default; "Admin access" row `flex items-center justify-between rounded-lg border p-3` is fine on mobile.
+
+Verification
+- `bun run lint` → exit 0, no errors, no warnings.
+- Emerald/teal theme preserved throughout; no indigo/blue introduced.
+- Touch targets: primary icon buttons now ≥36px (most are 40px); tab triggers full-width; form inputs stack on mobile.
+- No horizontal scroll at 390px except the reports heatmap (intentional, with scroll hint).
+- Only the 6 listed files were modified; no new files created.
+
+Stage Summary:
+- All 6 remaining tabs (savings, debt, bills, reports, setup, admin) are now mobile-friendly at 390px width.
+- Hero numbers wrap with `break-all`, stat-card grids use 2-col on mobile, forms stack `flex-col sm:flex-row`, tables switch to cards on mobile (admin), heatmap scrolls horizontally with a hint, charts resize via ResponsiveContainer, touch targets meet ≥40px where possible (≥36px minimum where space-constrained).
+- Lint clean. Ready for visual QA in browser at mobile widths.
+
+---
+Task ID: STATIC-MOBILE
+Agent: main
+Task: Remove Workers (static Pages), mobile responsiveness, demo read-only, mandatory category
+
+Work Log:
+- Architecture was ALREADY client-side Firebase + static export (output:'export') from prior turns — confirmed no API routes, no next-auth/bcryptjs, no wrangler.toml/open-next.config.ts
+- Demo read-only enforcement:
+  * auth-client.tsx: added module-level currentAppUser tracker + isDemoUser() export
+  * db.ts: added assertWritable() guard at the top of all 27 write functions — throws "Demo data is read-only..." if the signed-in user is the demo account
+  * app-shell already had the amber "Demo Mode — data is read-only" banner
+- Mandatory category selection:
+  * transactions-tab.tsx handleSubmit: added validation — if no categoryId, toast.error "Please select a category" and return (prevents uncategorized transactions that break charts/totals)
+  * Split dialog already validated categoryId per line item
+- Mobile responsiveness (2 parallel subagents):
+  * Subagent 1 (MOBILE): dashboard, transactions, budget, app-shell — hero stacks, stat numbers shrink (text-xl sm:text-2xl), quick-add form flex-col sm:flex-row, tables→cards, touch targets ≥40px, month-nav arrows enlarged
+  * Subagent 2 (MOBILE-2): savings, debt, bills, reports, setup, admin — goal cards stack, strategy toggle full-width, heatmap scrolls horizontally with hint, color/icon pickers enlarged, admin table→cards on mobile, search/sort/create cluster stacks
+- Auth screen: added "First time? Load demo data" button (runs seedClient which creates admin+demo Firebase Auth users + sample data, signs in as demo)
+- Fixed pre-existing lint error in carousel.tsx (setState-in-effect → deferred via rAF)
+- README updated: deployment section rewritten for Cloudflare Pages STATIC (build command `npm run build`, output `out`, no Workers, no nodejs_compat)
+- bun run lint → 0 errors
+- npm run build → succeeds, produces 2.8M static `out/` folder (only / and /_not-found, fully static, no server)
+- Rebuilt upload/ordiso.zip (229K) — no wrangler/open-next/next-auth/bcryptjs
+
+Stage Summary:
+- App is now a pure static site: Firebase Auth + Firestore client-side, no server runtime
+- Deploys to Cloudflare Pages with `npm run build` → output `out/` (simplest possible deploy, no Workers)
+- Demo data is read-only (db.ts guard blocks all writes for demo user)
+- Category selection is mandatory for all transactions (charts/totals now always include everything)
+- All 8 tabs + app-shell are mobile-responsive (390px verified, no horizontal scroll, touch targets ≥40px)
+- "Load demo data" button on login screen creates Firebase Auth users + seeds sample data

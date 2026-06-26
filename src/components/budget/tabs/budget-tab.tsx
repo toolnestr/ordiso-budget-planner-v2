@@ -238,7 +238,7 @@ function PlannedInput({
       disabled={isSaving}
       aria-label={`Planned amount for ${row.category.name}`}
       className={cn(
-        'h-8 w-24 text-right tabular-nums text-sm',
+        'h-9 sm:h-8 w-24 min-w-[60px] text-right tabular-nums text-sm',
         isSaving && 'opacity-60'
       )}
     />
@@ -329,7 +329,7 @@ function SummaryCard({
       </div>
       <div
         className={cn(
-          'text-2xl font-bold tabular-nums tracking-tight',
+          'text-xl sm:text-2xl font-bold tabular-nums tracking-tight',
           isBad && 'text-rose-600 dark:text-rose-400',
           isGood && 'text-emerald-600 dark:text-emerald-400'
         )}
@@ -448,13 +448,13 @@ export function BudgetTab() {
   return (
     <div className="space-y-6">
       {/* HERO: Left to Spend */}
-      <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-6">
+      <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4 sm:gap-6">
           <div className="space-y-1 min-w-0">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {monthLabel} · Zero-Based Budget
             </p>
-            <h2 className="text-2xl font-bold tracking-tight">Left to Spend</h2>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Left to Spend</h2>
             <p className="text-sm text-muted-foreground">
               Planned left to spend:{' '}
               <Currency amount={plannedLeftToSpend} className="font-medium text-foreground" />
@@ -467,7 +467,7 @@ export function BudgetTab() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
               className={cn(
-                'text-4xl sm:text-5xl font-bold tabular-nums tracking-tight leading-none',
+                'text-3xl sm:text-4xl lg:text-5xl font-bold tabular-nums tracking-tight leading-none break-all',
                 leftPositive
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : 'text-rose-600 dark:text-rose-400'

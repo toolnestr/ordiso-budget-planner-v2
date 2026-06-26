@@ -108,10 +108,10 @@ function HeroSummary({ goals }: { goals: SavingsGoal[] }) {
         aria-hidden
       />
 
-      <div className="relative flex flex-wrap items-start justify-between gap-4">
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-            <PiggyBank className="h-3.5 w-3.5" />
+            <PiggyBank className="h-3.5 w-3.5 shrink-0" />
             Savings &amp; Sinking Funds
           </div>
           <motion.h2
@@ -119,11 +119,11 @@ function HeroSummary({ goals }: { goals: SavingsGoal[] }) {
             initial={{ opacity: 0.6, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl"
+            className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl break-all leading-tight"
           >
             <Currency amount={totalSaved} />
           </motion.h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground break-words">
             of <span className="font-medium text-foreground"><Currency amount={totalTarget} /></span>{' '}
             saved across{' '}
             <span className="font-medium text-foreground">{goals.length}</span>{' '}
@@ -139,7 +139,7 @@ function HeroSummary({ goals }: { goals: SavingsGoal[] }) {
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-2">
           <div className="rounded-xl border bg-background/70 px-4 py-2.5 text-right backdrop-blur-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Overall Progress
@@ -279,14 +279,14 @@ function GoalCard({ goal, index, onAddFunds, onEdit, onDelete }: GoalCardProps) 
         {/* progress */}
         <div className="mt-4">
           <ProgressBar value={pct} height="h-3" color={hex} />
-          <div className="mt-2 flex items-center justify-between text-sm">
-            <span className="font-medium tabular-nums">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
+            <span className="font-medium tabular-nums min-w-0">
               <Currency amount={goal.savedAmount} />
               <span className="text-muted-foreground">
                 {' '}/ <Currency amount={goal.targetAmount} />
               </span>
             </span>
-            <span className="font-semibold tabular-nums" style={{ color: hex }}>
+            <span className="font-semibold tabular-nums shrink-0" style={{ color: hex }}>
               {pct.toFixed(0)}%
             </span>
           </div>
@@ -310,32 +310,34 @@ function GoalCard({ goal, index, onAddFunds, onEdit, onDelete }: GoalCardProps) 
         </div>
 
         <Separator className="my-4" />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             size="sm"
             onClick={() => onAddFunds(goal)}
-            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            className="w-full sm:w-auto gap-1.5 bg-emerald-600 hover:bg-emerald-700"
           >
-            <Plus className="h-3.5 w-3.5" /> Add Funds
+            <Plus className="h-4 w-4" /> Add Funds
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => onEdit(goal)}
-            aria-label={`Edit ${goal.name}`}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700"
-            onClick={() => onDelete(goal)}
-            aria-label={`Delete ${goal.name}`}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 w-10 p-0"
+              onClick={() => onEdit(goal)}
+              aria-label={`Edit ${goal.name}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 w-10 p-0 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700"
+              onClick={() => onDelete(goal)}
+              aria-label={`Delete ${goal.name}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </Card>
     </motion.div>
@@ -423,13 +425,13 @@ function AddFundsDialog({ goal, open, onOpenChange }: AddFundsDialogProps) {
               onChange={(e) => setAmount(e.target.value)}
               autoFocus
             />
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {quickAmounts.map((q) => (
                 <button
                   key={q}
                   type="button"
                   onClick={() => setAmount(String(q))}
-                  className="rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium tabular-nums transition-colors hover:bg-muted"
+                  className="rounded-full border bg-muted/40 px-3 py-2 text-xs font-medium tabular-nums transition-colors hover:bg-muted"
                 >
                   +<Currency amount={q} compact />
                 </button>
@@ -602,7 +604,7 @@ function GoalFormDialog({ mode, goal, preset, open, onOpenChange }: GoalFormDial
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="goal-target">Target Amount</Label>
               <Input
@@ -648,14 +650,14 @@ function GoalFormDialog({ mode, goal, preset, open, onOpenChange }: GoalFormDial
 
           <div className="space-y-2">
             <Label>Color</Label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {COLOR_KEYS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
                   className={cn(
-                    'h-7 w-7 rounded-full transition-transform',
+                    'h-9 w-9 rounded-full transition-transform',
                     color === c
                       ? 'ring-2 ring-offset-2 ring-offset-background scale-110'
                       : 'hover:scale-110',
@@ -670,14 +672,14 @@ function GoalFormDialog({ mode, goal, preset, open, onOpenChange }: GoalFormDial
 
           <div className="space-y-2">
             <Label>Icon</Label>
-            <div className="grid grid-cols-8 gap-1.5 max-h-32 overflow-y-auto scrollbar-thin rounded-md border p-2">
+            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-40 overflow-y-auto scrollbar-thin rounded-md border p-2">
               {CATEGORY_ICONS.map((ic) => (
                 <button
                   key={ic}
                   type="button"
                   onClick={() => setIcon(ic)}
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors',
+                    'flex h-10 w-10 items-center justify-center rounded-md text-lg transition-colors',
                     icon === ic
                       ? 'bg-emerald-500/20 ring-1 ring-emerald-500/40'
                       : 'hover:bg-muted',
@@ -780,7 +782,7 @@ function PopularGoals({
             key={p.name}
             type="button"
             onClick={() => onPick(p)}
-            className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-sm font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-2 text-sm font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm"
             style={{ borderColor: `${colorHex(p.color)}55` }}
           >
             <span className="text-base" aria-hidden>
@@ -933,8 +935,8 @@ export function SavingsTab() {
       {hasGoals && <HeroSummary goals={sortedGoals} />}
 
       {/* Header row with Add Goal button */}
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold">
             {hasGoals ? 'Your Goals' : 'Start Saving'}
           </h3>

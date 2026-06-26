@@ -115,33 +115,33 @@ export function DashboardTab() {
   return (
     <div className="space-y-6">
       {/* Hero summary */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">{monthName(month)} Overview</h2>
+      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{monthName(month)} Overview</h2>
             <p className="text-sm text-muted-foreground">{data.transactionCount} transactions tracked this month</p>
           </div>
-          <div className={cn('rounded-xl px-4 py-2 text-right', leftToSpendPositive ? 'bg-emerald-500/10' : 'bg-rose-500/10')}>
+          <div className={cn('rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-right w-full sm:w-auto', leftToSpendPositive ? 'bg-emerald-500/10' : 'bg-rose-500/10')}>
             <p className="text-xs font-medium text-muted-foreground uppercase">Left to Spend</p>
-            <p className={cn('text-2xl font-bold tabular-nums', leftToSpendPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+            <p className={cn('text-xl sm:text-2xl font-bold tabular-nums', leftToSpendPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
               <Currency amount={data.leftToSpend} />
             </p>
           </div>
         </div>
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Income" value={<Currency amount={data.totalIncome} />} icon={ArrowUpCircle} iconColor="text-emerald-600" sublabel="This month" />
-          <StatCard label="Total Expenses" value={<Currency amount={data.totalExpenses} />} icon={ArrowDownCircle} iconColor="text-rose-600" sublabel="Excl. savings" />
-          <StatCard label="Net Savings" value={<Currency amount={data.netSavings} sign />} icon={PiggyBank} iconColor="text-primary" sublabel={`${savingsRate.toFixed(0)}% savings rate`} />
-          <StatCard label="Net Worth" value={<Currency amount={data.netWorth} compact />} icon={Wallet} iconColor="text-amber-600" sublabel="All accounts" />
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Total Income" value={<Currency amount={data.totalIncome} className="text-xl sm:text-2xl" />} icon={ArrowUpCircle} iconColor="text-emerald-600" sublabel="This month" className="p-4 sm:p-5" />
+          <StatCard label="Total Expenses" value={<Currency amount={data.totalExpenses} className="text-xl sm:text-2xl" />} icon={ArrowDownCircle} iconColor="text-rose-600" sublabel="Excl. savings" className="p-4 sm:p-5" />
+          <StatCard label="Net Savings" value={<Currency amount={data.netSavings} sign className="text-xl sm:text-2xl" />} icon={PiggyBank} iconColor="text-primary" sublabel={`${savingsRate.toFixed(0)}% savings rate`} className="p-4 sm:p-5" />
+          <StatCard label="Net Worth" value={<Currency amount={data.netWorth} compact className="text-xl sm:text-2xl" />} icon={Wallet} iconColor="text-amber-600" sublabel="All accounts" className="p-4 sm:p-5" />
         </div>
       </div>
 
       {/* Charts row */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-5">
-        <Card className="p-5 lg:col-span-2">
+        <Card className="p-4 sm:p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold">Expense Breakdown</h3>
+            <div className="min-w-0">
+              <h3 className="font-semibold truncate">Expense Breakdown</h3>
               <p className="text-xs text-muted-foreground">Where your money goes</p>
             </div>
           </div>
@@ -176,22 +176,22 @@ export function DashboardTab() {
           )}
         </Card>
 
-        <Card className="p-5 lg:col-span-3">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold">Income vs Expenses</h3>
+        <Card className="p-4 sm:p-5 lg:col-span-3">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <div className="min-w-0">
+              <h3 className="font-semibold truncate">Income vs Expenses</h3>
               <p className="text-xs text-muted-foreground">Last 6 months</p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-3 text-xs shrink-0">
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Income</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" />Expenses</span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={barData} barGap={4}>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={barData} barGap={4} margin={{ left: -10, right: 8, top: 4, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} vertical={false} />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} fontSize={12} width={45} tickFormatter={(v) => `${sym}${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} interval={0} />
+              <YAxis tickLine={false} axisLine={false} fontSize={11} width={42} tickFormatter={(v) => `${sym}${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
               <Tooltip cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }} content={<ChartTooltipContent currency={sym} />} />
               <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={32} />
               <Bar dataKey="expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={32} />
@@ -202,7 +202,7 @@ export function DashboardTab() {
 
       {/* Accounts + Savings goals */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <h3 className="font-semibold mb-4">Account Balances</h3>
           <div className="space-y-3">
             {data.accounts.map((a) => {
@@ -235,7 +235,7 @@ export function DashboardTab() {
           </div>
         </Card>
 
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Savings Goals</h3>
             <Badge variant="secondary" className="text-xs">{data.savingsGoals.length} active</Badge>
@@ -262,7 +262,7 @@ export function DashboardTab() {
 
       {/* Alerts + Weekly checkin */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <h3 className="font-semibold mb-4 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" />Quick Glance Alerts</h3>
           <div className="space-y-3">
             {data.billsDueSoon.length > 0 && (
@@ -306,7 +306,7 @@ export function DashboardTab() {
           </div>
         </Card>
 
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <h3 className="font-semibold mb-1">Weekly Check-in</h3>
           <p className="text-xs text-muted-foreground mb-4">A quick Sunday ritual to stay on track</p>
           <div className="space-y-2">
@@ -317,7 +317,7 @@ export function DashboardTab() {
                   key={item.key}
                   onClick={() => toggleCheckin(item.key)}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent',
+                    'flex w-full items-center gap-3 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent min-h-[44px]',
                     done && 'bg-emerald-500/5 border-emerald-500/30'
                   )}
                 >

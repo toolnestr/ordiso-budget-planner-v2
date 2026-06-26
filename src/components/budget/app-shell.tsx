@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useSyncExternalStore } from 'react'
-import { signOut } from 'next-auth/react'
+import { useAuth } from '@/lib/auth-client'
 import {
   LayoutDashboard, Settings, Wallet, Receipt, Target, CreditCard, BarChart3, CalendarClock,
   Menu, Moon, Sun, TrendingUp, ChevronLeft, ChevronRight, LogOut, Shield,
@@ -36,7 +36,7 @@ function ThemeToggle() {
   )
   if (!mounted) return <div className="h-9 w-9" />
   return (
-    <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">
+    <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">
       {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </Button>
   )
@@ -101,11 +101,11 @@ function MonthNav() {
   const { month, year, prevMonth, nextMonth } = useBudgetStore()
   return (
     <div className="flex items-center gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth} aria-label="Previous month">
+      <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-8 sm:w-8" onClick={prevMonth} aria-label="Previous month">
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="text-sm font-semibold min-w-[110px] text-center tabular-nums">{monthName(month)} {year}</span>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth} aria-label="Next month">
+      <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-8 sm:w-8" onClick={nextMonth} aria-label="Next month">
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
@@ -113,10 +113,11 @@ function MonthNav() {
 }
 
 function UserMenu({ userName, userEmail, isAdmin }: { userName: string; userEmail: string; isAdmin: boolean }) {
+  const { signOut } = useAuth()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors" aria-label="User menu">
+        <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors min-h-[40px]" aria-label="User menu">
           <Avatar className="h-7 w-7">
             <AvatarFallback className={cn('text-xs font-semibold', isAdmin ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-primary/15 text-primary')}>
               {initials(userName)}
@@ -135,7 +136,7 @@ function UserMenu({ userName, userEmail, isAdmin }: { userName: string; userEmai
           {isAdmin && <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">Administrator</span>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })} className="text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 cursor-pointer">
+        <DropdownMenuItem onClick={() => signOut()} className="text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400 cursor-pointer">
           <LogOut className="h-4 w-4 mr-2" />
           Sign out
         </DropdownMenuItem>
@@ -149,11 +150,13 @@ export function AppShell({
   isAdmin,
   userName,
   userEmail,
+  isDemo,
 }: {
   children: React.ReactNode
   isAdmin: boolean
   userName: string
   userEmail: string
+  isDemo: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const activeTab = useBudgetStore((s) => s.activeTab)
@@ -161,11 +164,17 @@ export function AppShell({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Demo-mode banner */}
+      {isDemo && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs text-center py-1.5 px-4 font-medium">
+          Demo Mode — data is read-only. Sign up for a real account to edit.
+        </div>
+      )}
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 py-3">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Open menu"><Menu className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="Open menu"><Menu className="h-5 w-5" /></Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <SheetHeader className="text-left">

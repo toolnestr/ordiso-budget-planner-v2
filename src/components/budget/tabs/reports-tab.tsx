@@ -97,12 +97,13 @@ function YearSelector({
         onClick={onPrev}
         disabled={atMin}
         aria-label="Previous year"
+        className="h-10 w-10"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <div className="rounded-lg border bg-card px-4 py-1.5 min-w-[110px] text-center">
+      <div className="rounded-lg border bg-card px-3 sm:px-4 py-1.5 min-w-[100px] sm:min-w-[110px] text-center">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Annual Review</p>
-        <p className="text-lg font-bold tabular-nums leading-tight">{year}</p>
+        <p className="text-base sm:text-lg font-bold tabular-nums leading-tight">{year}</p>
       </div>
       <Button
         variant="outline"
@@ -110,6 +111,7 @@ function YearSelector({
         onClick={onNext}
         disabled={atMax}
         aria-label="Next year"
+        className="h-10 w-10"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
@@ -134,22 +136,22 @@ function HeatmapTable({
     )
   }
   return (
-    <div className="overflow-x-auto scrollbar-thin -mx-1 px-1">
-      <table className="w-full border-collapse text-sm min-w-[860px]">
+    <div className="overflow-x-auto scrollbar-thin -mx-1 px-1 pb-1">
+      <table className="w-full border-collapse text-sm min-w-[760px] sm:min-w-[860px]">
         <thead>
           <tr>
-            <th className="sticky left-0 z-20 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-2 py-2 min-w-[150px] border-b">
+            <th className="sticky left-0 z-20 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-2 py-2 min-w-[140px] sm:min-w-[150px] border-b">
               Category
             </th>
             {MONTH_LABELS.map((m, i) => (
               <th
                 key={i}
-                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-1 py-2 text-center min-w-[58px] border-b"
+                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-1 py-2 text-center min-w-[52px] sm:min-w-[58px] border-b"
               >
                 {m}
               </th>
             ))}
-            <th className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-2 py-2 text-right min-w-[78px] border-b">
+            <th className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground px-2 py-2 text-right min-w-[72px] sm:min-w-[78px] border-b">
               Total
             </th>
           </tr>
@@ -352,17 +354,17 @@ export function ReportsTab() {
       </div>
 
       {/* Year-end summary hero */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-6">
+      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">{year} Year in Review</h2>
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight break-words">{year} Year in Review</h2>
             <p className="text-sm text-muted-foreground">
               The big picture across all 12 months
             </p>
           </div>
           <Award className="h-6 w-6 text-primary hidden sm:block" />
         </div>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
           <StatCard
             label="Total Income"
             value={<Currency amount={yearEnd.totalIncome} compact />}
@@ -417,15 +419,15 @@ export function ReportsTab() {
       </div>
 
       {/* Income vs Expenses trend */}
-      <Card className="p-5">
+      <Card className="p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div>
+          <div className="min-w-0">
             <h3 className="font-semibold">Income vs Expenses — Full Year</h3>
             <p className="text-xs text-muted-foreground">
               Monthly flow across all 12 months
             </p>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
               Income
@@ -440,7 +442,7 @@ export function ReportsTab() {
             </span>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={trendData} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="grad-income" x1="0" y1="0" x2="0" y2="1">
@@ -500,9 +502,9 @@ export function ReportsTab() {
       </Card>
 
       {/* Category heatmap */}
-      <Card className="p-5">
+      <Card className="p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div>
+          <div className="min-w-0">
             <h3 className="font-semibold">Spending Heatmap by Category</h3>
             <p className="text-xs text-muted-foreground">
               Where each category spiked — darker means more spent
@@ -515,15 +517,15 @@ export function ReportsTab() {
         <HeatmapTable rows={heatmap} currency={sym} />
         <p className="text-[11px] text-muted-foreground mt-3">
           Each cell shows that month&apos;s spend. Color intensity scales relative to the
-          category&apos;s busiest month.
+          category&apos;s busiest month. ← Swipe horizontally to view all months →
         </p>
       </Card>
 
       {/* Bottom row: top categories + net worth */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
-            <div>
+            <div className="min-w-0">
               <h3 className="font-semibold">Where Your Money Went</h3>
               <p className="text-xs text-muted-foreground">
                 Top spending categories this year
@@ -533,15 +535,15 @@ export function ReportsTab() {
           <TopCategoriesList items={topCategories} />
         </Card>
 
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
-            <div>
+            <div className="min-w-0">
               <h3 className="font-semibold">Net Worth Trajectory</h3>
               <p className="text-xs text-muted-foreground">
                 Cumulative growth across the year
               </p>
             </div>
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
           </div>
           {hasNetWorth ? (
             <ResponsiveContainer width="100%" height={260}>

@@ -90,16 +90,20 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api || !setApi) return
-    setApi(api)
+    // Defer to avoid synchronous setState-in-effect; setApi is a stable setter.
+    Promise.resolve().then(() => setApi(api))
   }, [api, setApi])
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
+    // Defer the initial onSelect call (it calls setState) to avoid the
+    // synchronous setState-in-effect lint rule.
+    const raf = requestAnimationFrame(() => onSelect(api))
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
+      cancelAnimationFrame(raf)
       api?.off("select", onSelect)
     }
   }, [api, onSelect])

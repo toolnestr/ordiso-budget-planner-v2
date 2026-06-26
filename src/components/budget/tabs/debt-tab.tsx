@@ -453,7 +453,7 @@ function DebtCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-10 w-10"
               onClick={() => onEdit(debt)}
               aria-label={`Edit ${debt.name}`}
             >
@@ -462,7 +462,7 @@ function DebtCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+              className="h-10 w-10 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
               onClick={() => onDelete(debt)}
               aria-label={`Delete ${debt.name}`}
             >
@@ -797,7 +797,7 @@ export function DebtTab() {
           <div
             role="radiogroup"
             aria-label="Payoff strategy"
-            className="inline-flex rounded-lg border bg-muted/50 p-1 self-start"
+            className="grid grid-cols-2 w-full sm:flex sm:inline-flex sm:w-auto rounded-lg border bg-muted/50 p-1"
           >
             <button
               type="button"
@@ -805,7 +805,7 @@ export function DebtTab() {
               aria-checked={strategy === 'SNOWBALL'}
               onClick={() => setStrategy('SNOWBALL')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+                'inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all',
                 strategy === 'SNOWBALL'
                   ? 'bg-background shadow-sm text-rose-600 dark:text-rose-400'
                   : 'text-muted-foreground hover:text-foreground',
@@ -820,7 +820,7 @@ export function DebtTab() {
               aria-checked={strategy === 'AVALANCHE'}
               onClick={() => setStrategy('AVALANCHE')}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+                'inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all',
                 strategy === 'AVALANCHE'
                   ? 'bg-background shadow-sm text-amber-600 dark:text-amber-400'
                   : 'text-muted-foreground hover:text-foreground',

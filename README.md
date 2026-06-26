@@ -91,17 +91,15 @@ service cloud.firestore {
 
 ---
 
-## 3 · Deploy to Cloudflare Workers
+## 3 · Deploy to Cloudflare Pages (static — no Workers)
 
-This project uses the **OpenNext Cloudflare adapter** (`@opennextjs/cloudflare`)
-which builds the Next.js app for Cloudflare Workers with **full Node.js runtime
-support**. This is required because the app uses NextAuth, bcryptjs, and the
-Firebase Firestore SDK — none of which are compatible with the Edge Runtime that
-the older `@cloudflare/next-on-pages` adapter forces.
+This app is a **pure static site**. It talks to Firebase Auth + Firestore
+directly from the browser — no server, no Workers, no API routes. This makes it
+fast, lightweight, and free to host on Cloudflare Pages.
 
 ### Option A — Connect via Git (recommended)
 
-1. **Push this project to GitHub/GitLab**:
+1. **Push this project to GitHub**:
    ```bash
    git init
    git add -A
@@ -112,55 +110,47 @@ the older `@cloudflare/next-on-pages` adapter forces.
    ```
 
 2. **In the Cloudflare dashboard**:
-   - Go to **Workers & Pages** → [Create](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create)
-   - Click **Create Worker** (or **Connect to Git**)
+   - Go to **Workers & Pages** → [Create](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create) → **Pages** → **Connect to Git**
    - Select your `ordiso` repository
    - Set the build settings:
-     - **Framework preset:** `Next.js`
-     - **Build command:** `npx @opennextjs/cloudflare build`
-     - **Deploy command:** `npx wrangler deploy`
-   - Under **Environment variables** (Settings → Variables), add:
-     - `NEXTAUTH_SECRET` = a random string (run `openssl rand -base64 32`)
-     - `NEXTAUTH_URL` = `https://ordiso.<your-subdomain>.workers.dev` (update after first deploy to your real URL)
-     - `NODE_VERSION` = `20`
+     - **Framework preset:** `Next.js (Static HTML Export)`
+     - **Build command:** `npm run build`
+     - **Build output directory:** `out`
+     - **Environment variable:** `NODE_VERSION` = `20`
    - Click **Save and Deploy**
 
-3. After the first deploy, update `NEXTAUTH_URL` to your production URL
-   and trigger a redeploy.
+3. That's it! Cloudflare builds the static site and serves it from its global CDN. No Workers, no server cold starts, no `nodejs_compat` needed.
 
-> **Why OpenNext and not `@cloudflare/next-on-pages`?** The older adapter
-> requires all API routes to use `export const runtime = 'edge'`, which breaks
-> NextAuth + bcryptjs + Firebase. OpenNext runs the full Node.js runtime on
-> Cloudflare Workers (via the `nodejs_compat` flag), so everything works
-> unchanged.
+> **Why static?** All auth (Firebase Auth) and data (Firestore) happen in the
+> browser via the Firebase client SDK. The `next build` command produces a fully
+> static `out/` folder. This is the fastest, cheapest, simplest deployment.
 
-### Option B — Deploy via Wrangler CLI (from your machine)
+### Option B — Deploy via Wrangler CLI
 
 ```bash
-# Install Wrangler
-npm install -g wrangler
-
-# Login to Cloudflare
-wrangler login
-
-# Install dependencies
 npm install
-
-# Set your secrets (run once — these are stored encrypted)
-wrangler secret put NEXTAUTH_SECRET    # paste a random string
-
-# Build for Cloudflare Workers + deploy
-npm run cf:deploy
+npm run build
+npx wrangler pages deploy out --project-name=ordiso
 ```
-
-This runs `@opennextjs/cloudflare build` then `wrangler deploy` in one step.
 
 ---
 
-## 4 · After deployment
+## 4 · First visit — load demo data
 
-1. Visit your Cloudflare Workers URL (e.g. `https://ordiso.<your-subdomain>.workers.dev`)
-2. The app auto-seeds the admin + demo accounts on first visit
+After deploying, visit your site. On the login screen, click **"First time? Load demo data"**.
+This creates the admin + demo accounts in Firebase Auth and seeds 6 months of sample
+transactions for the demo user (~10 seconds). You'll be signed in as the demo user
+automatically.
+
+**Demo login:** `demo@ordiso.app` / `demo123` (read-only — data resets on re-seed)
+**Admin login:** `admin@ordiso.app` / `admin123` (can create/ban/delete users)
+
+---
+
+## 5 · After deployment
+
+1. Visit your Cloudflare Pages URL (e.g. `https://ordiso.pages.dev`)
+2. Click **"First time? Load demo data"** on the login screen (creates users + sample data)
 3. Log in as **admin@ordiso.app / admin123**
 4. Go to **Admin Console** → **Create User** to make accounts for your customers
 

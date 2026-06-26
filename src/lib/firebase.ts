@@ -1,6 +1,10 @@
-// Firebase initialization — uses the provided web config + Firestore.
+// Firebase initialization — client-side (browser) SDK.
+// Used for both Auth and Firestore directly from the browser, which removes
+// the need for server-side API routes / Cloudflare Workers. The app deploys
+// as a static site on Cloudflare Pages.
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCTMx6EP7bsffX8JeoR01v9WwKsswUq89w',
@@ -11,9 +15,8 @@ const firebaseConfig = {
   appId: '1:183867097387:web:c92b6f85d7697dfd98456e',
 }
 
-// Reuse the app across hot reloads
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
 
-// Server-side Firestore (memory-only, no persistence needed on the server)
-export const firestore = getFirestore(app)
+export const db = getFirestore(app)
+export const auth = getAuth(app)
 export { app }

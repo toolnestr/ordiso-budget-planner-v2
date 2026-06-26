@@ -279,8 +279,8 @@ function BillRow({ bill }: { bill: EnrichedBill }) {
           )}
         </div>
         <div className="text-right shrink-0">
-          <Currency amount={bill.amount} className="font-semibold" />
-          <p className="text-xs text-muted-foreground">
+          <Currency amount={bill.amount} className="font-semibold break-all" />
+          <p className="text-xs text-muted-foreground whitespace-nowrap">
             ≈ <Currency amount={monthlyEquivalent(bill)} compact /> /mo
           </p>
         </div>
@@ -289,7 +289,7 @@ function BillRow({ bill }: { bill: EnrichedBill }) {
       <Separator className="my-3" />
 
       {/* Bottom: due info + controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           {!recentlyPaid && <DueBadge dueInDays={bill.dueInDays} />}
           <span className="text-xs text-muted-foreground truncate">
@@ -299,7 +299,7 @@ function BillRow({ bill }: { bill: EnrichedBill }) {
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none py-1.5">
             <Switch
               checked={bill.cancelFlag}
               onCheckedChange={handleCancelToggle}
@@ -319,7 +319,7 @@ function BillRow({ bill }: { bill: EnrichedBill }) {
               size="sm"
               onClick={handleMarkPaid}
               disabled={pending}
-              className="h-7"
+              className="h-9"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Mark Paid
@@ -327,7 +327,7 @@ function BillRow({ bill }: { bill: EnrichedBill }) {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Bill actions">
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="Bill actions">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -482,7 +482,7 @@ function BillForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="bill-amount">Amount</Label>
           <Input
@@ -512,7 +512,7 @@ function BillForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="bill-day">Due Day</Label>
           <Input
@@ -854,17 +854,17 @@ export function BillsTab() {
 
       {/* Bills list — grouped by subscriptions vs regular */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="subscriptions" className="gap-1.5">
             <Repeat className="h-3.5 w-3.5" />
-            Subscriptions
+            <span className="truncate">Subscriptions</span>
             <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5">
               {subscriptions.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="regular" className="gap-1.5">
             <CreditCard className="h-3.5 w-3.5" />
-            Regular Bills
+            <span className="truncate">Regular Bills</span>
             <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5">
               {regularBills.length}
             </Badge>

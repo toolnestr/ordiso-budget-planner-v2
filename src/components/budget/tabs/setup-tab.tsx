@@ -151,7 +151,7 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (c: s
             aria-label={key}
             aria-pressed={selected}
             className={cn(
-              'h-7 w-7 rounded-full border-2 transition-all',
+              'h-9 w-9 rounded-full border-2 transition-all',
               selected ? 'border-foreground scale-110 shadow-sm' : 'border-transparent hover:scale-105',
             )}
             style={{ backgroundColor: hex }}
@@ -164,7 +164,7 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (c: s
 
 function IconPicker({ value, onChange }: { value: string; onChange: (i: string) => void }) {
   return (
-    <div className="grid grid-cols-10 gap-1.5 max-h-32 overflow-y-auto scrollbar-thin pr-1">
+    <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-40 overflow-y-auto scrollbar-thin pr-1">
       {CATEGORY_ICONS.map((icon) => {
         const selected = value === icon
         return (
@@ -175,7 +175,7 @@ function IconPicker({ value, onChange }: { value: string; onChange: (i: string) 
             aria-label={`Icon ${icon}`}
             aria-pressed={selected}
             className={cn(
-              'h-8 w-8 rounded-md text-base flex items-center justify-center transition-all',
+              'h-10 w-10 rounded-md text-base flex items-center justify-center transition-all',
               selected ? 'bg-primary/15 ring-2 ring-primary' : 'hover:bg-accent',
             )}
           >
@@ -408,7 +408,7 @@ function IncomeSection() {
           {income.map((s) => (
             <div
               key={s.id}
-              className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+              className="flex flex-col gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="rounded-lg bg-primary/10 p-2 shrink-0">
@@ -429,16 +429,16 @@ function IncomeSection() {
                   {s.notes && <p className="text-xs text-muted-foreground truncate mt-0.5">{s.notes}</p>}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center justify-between gap-2 shrink-0 sm:justify-end">
                 <span className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
                   <Currency amount={s.expectedMonthly} />
                 </span>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} aria-label={`Edit ${s.name}`}>
-                    <Pencil className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(s)} aria-label={`Edit ${s.name}`}>
+                    <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600" onClick={() => setDeleteTarget(s)} aria-label={`Delete ${s.name}`}>
-                    <Trash2 className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:text-rose-600" onClick={() => setDeleteTarget(s)} aria-label={`Delete ${s.name}`}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -821,7 +821,7 @@ function CategoryList({ items, onEdit, onDelete, onToggleRollover, emptyMessage 
       {items.map((c) => (
         <div
           key={c.id}
-          className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+          className="flex flex-col gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div
@@ -850,7 +850,7 @@ function CategoryList({ items, onEdit, onDelete, onToggleRollover, emptyMessage 
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center justify-between gap-3 shrink-0 sm:justify-end">
             <div className="flex items-center gap-2">
               <Label htmlFor={`roll-${c.id}`} className="text-xs text-muted-foreground hidden sm:block cursor-pointer">
                 Rollover
@@ -863,11 +863,11 @@ function CategoryList({ items, onEdit, onDelete, onToggleRollover, emptyMessage 
               />
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(c)} aria-label={`Edit ${c.name}`}>
-                <Pencil className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onEdit(c)} aria-label={`Edit ${c.name}`}>
+                <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600" onClick={() => onDelete(c)} aria-label={`Delete ${c.name}`}>
-                <Trash2 className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:text-rose-600" onClick={() => onDelete(c)} aria-label={`Delete ${c.name}`}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -1018,7 +1018,7 @@ function AccountsSection() {
             return (
               <div
                 key={a.id}
-                className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                className="flex flex-col gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="rounded-lg p-2 shrink-0" style={{ backgroundColor: `${colorHex(a.color)}1a` }}>
@@ -1036,7 +1036,7 @@ function AccountsSection() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center justify-between gap-2 shrink-0 sm:justify-end">
                   <div className="text-right">
                     <p className="text-[10px] font-medium text-muted-foreground uppercase">Current</p>
                     <p className={cn('text-sm font-semibold tabular-nums', negative ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
@@ -1044,11 +1044,11 @@ function AccountsSection() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(a)} aria-label={`Edit ${a.name}`}>
-                      <Pencil className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openEdit(a)} aria-label={`Edit ${a.name}`}>
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500 hover:text-rose-600" onClick={() => setDeleteTarget(a)} aria-label={`Delete ${a.name}`}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:text-rose-600" onClick={() => setDeleteTarget(a)} aria-label={`Delete ${a.name}`}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

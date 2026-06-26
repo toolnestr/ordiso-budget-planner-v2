@@ -138,7 +138,7 @@ function UserActionsMenu({
         <Button
           variant="ghost"
           size="icon"
-          className="size-8"
+          className="size-9"
           disabled={disabled}
           aria-label={`Actions for ${user.name || user.email}`}
         >
@@ -312,7 +312,7 @@ export function AdminTab() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {statsLoading || !statsCards
           ? Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-28 rounded-xl" />
@@ -335,40 +335,43 @@ export function AdminTab() {
               {filtered.length} shown
             </Badge>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:w-auto sm:gap-2">
             <div className="relative flex-1 sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name or email…"
-                className="pl-9 sm:w-64"
+                className="pl-9 h-10 sm:w-64"
                 aria-label="Search users"
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 shrink-0">
-                  <ChevronDown className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{SORT_LABELS[sort]}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={sort}
-                  onValueChange={(v) => setSort(v as SortKey)}
-                >
-                  <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="name-asc">Name A-Z</DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button size="sm" className="gap-2 shrink-0" onClick={() => { setCreateForm({ name: '', email: '', password: '', isAdmin: false }); setCreateError(null); setCreateOpen(true) }}>
-              <UserPlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Create User</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 shrink-0 h-10">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{SORT_LABELS[sort]}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={sort}
+                    onValueChange={(v) => setSort(v as SortKey)}
+                  >
+                    <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="name-asc">Name A-Z</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" className="gap-2 shrink-0 h-10 flex-1 sm:flex-none" onClick={() => { setCreateForm({ name: '', email: '', password: '', isAdmin: false }); setCreateError(null); setCreateOpen(true) }}>
+                <UserPlus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Create User</span>
+                <span className="sm:hidden">Create</span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -465,7 +468,7 @@ export function AdminTab() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <UserAvatar user={u} className="size-10" />
+                      <UserAvatar user={u} className="size-10 shrink-0" />
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">
                           {u.name || 'Unnamed'}

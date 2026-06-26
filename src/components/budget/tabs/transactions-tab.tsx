@@ -168,6 +168,10 @@ export function TransactionsTab() {
       toast.error('Please enter a description and amount')
       return
     }
+    if (!categoryId) {
+      toast.error('Please select a category', { description: 'Every transaction must be categorized so it appears in your charts and totals.' })
+      return
+    }
     const amt = parseFloat(amount)
     if (isNaN(amt) || amt <= 0) {
       toast.error('Please enter a valid amount')
@@ -277,7 +281,7 @@ export function TransactionsTab() {
           </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-2 sm:gap-3">
             {/* Type toggle */}
             <div className="w-full sm:w-auto sm:min-w-[210px]">
               <Label className="text-xs text-muted-foreground mb-1 block">Type</Label>
@@ -360,7 +364,7 @@ export function TransactionsTab() {
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
             {/* Add */}
-            <Button type="submit" disabled={createMut.isPending} className="h-9">
+            <Button type="submit" disabled={createMut.isPending} className="h-10 sm:h-9 w-full sm:w-auto justify-center">
               {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Add
             </Button>
@@ -385,24 +389,24 @@ export function TransactionsTab() {
       </Card>
 
       {/* ---------- Summary Strip ---------- */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border p-3 bg-emerald-500/5">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase">Income</p>
-          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-lg border p-2.5 sm:p-3 bg-emerald-500/5">
+          <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase truncate">Income</p>
+          <p className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5 truncate">
             <Currency amount={summary.income} />
           </p>
         </div>
-        <div className="rounded-lg border p-3 bg-rose-500/5">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase">Expenses</p>
-          <p className="text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-0.5">
+        <div className="rounded-lg border p-2.5 sm:p-3 bg-rose-500/5">
+          <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase truncate">Expenses</p>
+          <p className="text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-0.5 truncate">
             <Currency amount={summary.expenses} />
           </p>
         </div>
-        <div className="rounded-lg border p-3 bg-primary/5">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase">Net</p>
+        <div className="rounded-lg border p-2.5 sm:p-3 bg-primary/5">
+          <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase truncate">Net</p>
           <p
             className={cn(
-              'text-lg font-bold tabular-nums mt-0.5',
+              'text-base sm:text-lg font-bold tabular-nums mt-0.5 truncate',
               summary.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
             )}
           >
@@ -412,7 +416,7 @@ export function TransactionsTab() {
       </div>
 
       {/* ---------- Filter Bar ---------- */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -662,7 +666,7 @@ function TransactionRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+            className="h-10 w-10 sm:h-8 sm:w-8 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
