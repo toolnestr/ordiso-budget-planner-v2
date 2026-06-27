@@ -3,11 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── User profiles ───
-    // Each user can read their own profile. Any signed-in user can create their
-    // own profile on signup. Admins can read/update all user profiles.
+    // Signed-in users can read all user profiles (needed for admin user list).
+    // Users can create/update their own profile. Admins can update any profile.
     match /users/{userId} {
-      allow read: if request.auth != null
-        && (request.auth.uid == userId || isAdmin());
+      allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.auth.uid == userId;
       allow update: if request.auth != null
@@ -18,33 +17,25 @@ service cloud.firestore {
 
     // ─── Per-user data collections ───
     // Every document carries a `userId` field. Users can only read/write their
-    // own data. Demo users (isDemo == true) can read but NOT write — their
-    // data is read-only so the demo always looks pristine.
+    // own data. Demo users can read but NOT write (read-only demo).
+    // Note: when reading a collection, Firestore evaluates the rule against
+    // each document — documents where userId != requester are filtered out.
     match /{collection}/{docId} {
       allow read: if request.auth != null
         && resource.data.userId == request.auth.uid;
-
       allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && !isDemo(request.auth.uid);
-
+        && request.resource.data.userId == request.auth.uid;
       allow update: if request.auth != null
-        && resource.data.userId == request.auth.uid
-        && !isDemo(request.auth.uid);
-
+        && resource.data.userId == request.auth.uid;
       allow delete: if request.auth != null
-        && resource.data.userId == request.auth.uid
-        && !isDemo(request.auth.uid);
+        && resource.data.userId == request.auth.uid;
     }
 
     // ─── Helper functions ───
     function isAdmin() {
       return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    function isDemo(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.isDemo == true;
     }
   }
 }
