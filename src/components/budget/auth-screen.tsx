@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth-client'
 import { toast } from 'sonner'
 import {
@@ -11,8 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { collection, getDocs, limit, query } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 
 const DEMO_ACCOUNTS: { label: string; email: string; password: string }[] = [
   { label: 'Demo', email: 'demo@ordiso.app', password: 'demo123' },
@@ -31,41 +29,7 @@ export function AuthScreen() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [initializing, setInitializing] = useState(true)
-
-  // On first visit, check if the database has any users. If it's empty (or the
-  // read is blocked by rules), auto-seed the admin + demo accounts so the user
-  // can sign in immediately — no manual "load demo data" button needed.
-  // seedClient is idempotent: it skips users that already exist.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const snap = await getDocs(query(collection(db, 'users'), limit(1)))
-        if (cancelled) return
-        if (!snap.empty) {
-          // Users exist — nothing to do
-          setInitializing(false)
-          return
-        }
-      } catch {
-        // Read blocked by rules (unauthenticated) — likely empty DB, fall through to seed
-      }
-      // Database is empty (or read failed) — seed it automatically
-      try {
-        toast.info('Setting up your planner… this takes ~10 seconds')
-        const { seedClient } = await import('@/lib/seed-client')
-        await seedClient()
-        if (!cancelled) toast.success('Welcome to Ordiso! Demo data is ready — sign in below.')
-      } catch (e) {
-        console.error('Auto-seed failed:', e)
-        // Don't block the login screen — user can still sign in if accounts exist
-      } finally {
-        if (!cancelled) setInitializing(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
+  const [seeding, setSeeding] = useState(false)
 
   const autofill = (em: string, pw: string) => {
     setEmail(em)
@@ -87,14 +51,34 @@ export function AuthScreen() {
     } catch (err) {
       const code = (err as { code?: string }).code ?? ''
       const msg = (err as { message?: string }).message ?? ''
-      if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-email')) {
-        setError('Invalid email or password. If this is your first visit, the demo data is loading automatically — wait for the "ready" message then try again.')
+      // If the demo/admin user doesn't exist yet (first visit), auto-seed
+      // the database and then retry the login. This only happens once —
+      // subsequent sign-ins find the existing users immediately.
+      if (code.includes('user-not-found') || code.includes('invalid-credential') || code.includes('operation-not-allowed')) {
+        try {
+          setLoading(false)
+          setSeeding(true)
+          toast.info('First visit detected — setting up demo data… ~10 seconds')
+          const { seedClient } = await import('@/lib/seed-client')
+          await seedClient()
+          // Retry the sign-in now that the users exist
+          await signIn(email.trim(), password)
+          toast.success('Welcome to Ordiso!')
+        } catch (seedErr) {
+          const seedCode = (seedErr as { code?: string }).code ?? ''
+          if (seedCode.includes('email-already-in-use')) {
+            // User exists but password mismatch — show a clear error
+            setError('Account exists but the password is incorrect. Try again.')
+          } else {
+            setError('Could not set up the demo. ' + ((seedErr as Error).message || ''))
+          }
+        } finally {
+          setSeeding(false)
+        }
       } else if (code.includes('too-many-requests')) {
         setError('Too many attempts. Try again in a minute.')
       } else if (code.includes('network-request-failed') || code.includes('internal-error')) {
         setError('Network error. Check your connection and try again.')
-      } else if (code.includes('operation-not-allowed')) {
-        setError('Email/Password sign-in is not enabled in Firebase. Contact the administrator.')
       } else if (code.includes('api-key-not-valid') || code.includes('api-key/invalid')) {
         setError('Firebase configuration error. Contact the administrator.')
       } else {
@@ -106,15 +90,22 @@ export function AuthScreen() {
     }
   }
 
-  if (initializing) {
+  // While seeding (first-visit demo setup), show a full-screen loading state
+  if (seeding) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-background to-teal-50 dark:from-emerald-950/50 dark:via-background dark:to-teal-950/40 gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-background to-teal-50 dark:from-emerald-950/50 dark:via-background dark:to-teal-950/40 gap-4 p-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30">
           <TrendingUp className="h-6 w-6 text-white" />
         </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-lg font-semibold">Setting up your planner…</h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Creating demo accounts and loading 6 months of sample transactions. This only happens once.
+          </p>
+        </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Setting up your planner…
+          ~10 seconds remaining
         </div>
       </div>
     )
