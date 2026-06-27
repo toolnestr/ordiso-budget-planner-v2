@@ -6,7 +6,7 @@
 // Workers entirely; the app deploys as a static site.
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, limit as fbLimit, writeBatch, type QueryConstraint, type WhereFilterOp,
+  query, where, writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { useAuth, isDemoUser } from './auth-client'
@@ -32,18 +32,35 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Record<strin
   return out
 }
 
-async function getAll<T>(name: string, userId: string, orderByField?: string): Promise<Doc<T>[]> {
-  const q = orderByField
-    ? query(collection(db, name), where('userId', '==', userId), orderBy(orderByField))
-    : query(collection(db, name), where('userId', '==', userId))
+// CRITICAL: We only ever query with a SINGLE where clause on `userId`.
+// Combining where('userId') + orderBy(field) or where('userId') + where(field)
+// requires Firestore composite indexes (which must be created manually in the
+// console). To avoid that, we fetch by userId only and sort/filter in memory.
+// Per-user data volumes are small, so this is fast and needs zero index setup.
+async function getAll<T extends Record<string, unknown>>(name: string, userId: string, sortField?: string): Promise<Doc<T>[]> {
+  const q = query(collection(db, name), where('userId', '==', userId))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ ...(d.data() as T), id: d.id }))
+  const docs = snap.docs.map((d) => ({ ...(d.data() as T), id: d.id }))
+  if (sortField) {
+    docs.sort((a, b) => {
+      const av = a[sortField] as number | string | undefined
+      const bv = b[sortField] as number | string | undefined
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      if (typeof av === 'number' && typeof bv === 'number') return av - bv
+      return String(av).localeCompare(String(bv))
+    })
+  }
+  return docs
 }
 
-async function getWhere<T>(name: string, userId: string, field: string, value: unknown): Promise<Doc<T>[]> {
-  const q = query(collection(db, name), where('userId', '==', userId), where(field, '==', value))
+async function getWhere<T extends Record<string, unknown>>(name: string, userId: string, field: string, value: unknown): Promise<Doc<T>[]> {
+  const q = query(collection(db, name), where('userId', '==', userId))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ ...(d.data() as T), id: d.id }))
+  return snap.docs
+    .map((d) => ({ ...(d.data() as T), id: d.id }))
+    .filter((d) => (d as Record<string, unknown>)[field] === value)
 }
 
 // ───────────────────────── Settings ─────────────────────────
