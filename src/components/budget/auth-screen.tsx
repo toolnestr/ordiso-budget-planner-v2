@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth-client'
 import { toast } from 'sonner'
 import {
-  Loader2, TrendingUp, Wallet, Target, CreditCard, BarChart3, ArrowRight, Check, Info, Sparkles,
+  Loader2, TrendingUp, Wallet, Target, CreditCard, BarChart3, ArrowRight, Check, Info,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { collection, getDocs, limit, query } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 const DEMO_ACCOUNTS: { label: string; email: string; password: string }[] = [
   { label: 'Demo', email: 'demo@ordiso.app', password: 'demo123' },
@@ -29,7 +31,41 @@ export function AuthScreen() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [seeding, setSeeding] = useState(false)
+  const [initializing, setInitializing] = useState(true)
+
+  // On first visit, check if the database has any users. If it's empty (or the
+  // read is blocked by rules), auto-seed the admin + demo accounts so the user
+  // can sign in immediately — no manual "load demo data" button needed.
+  // seedClient is idempotent: it skips users that already exist.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'users'), limit(1)))
+        if (cancelled) return
+        if (!snap.empty) {
+          // Users exist — nothing to do
+          setInitializing(false)
+          return
+        }
+      } catch {
+        // Read blocked by rules (unauthenticated) — likely empty DB, fall through to seed
+      }
+      // Database is empty (or read failed) — seed it automatically
+      try {
+        toast.info('Setting up your planner… this takes ~10 seconds')
+        const { seedClient } = await import('@/lib/seed-client')
+        await seedClient()
+        if (!cancelled) toast.success('Welcome to Ordiso! Demo data is ready — sign in below.')
+      } catch (e) {
+        console.error('Auto-seed failed:', e)
+        // Don't block the login screen — user can still sign in if accounts exist
+      } finally {
+        if (!cancelled) setInitializing(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const autofill = (em: string, pw: string) => {
     setEmail(em)
@@ -52,16 +88,17 @@ export function AuthScreen() {
       const code = (err as { code?: string }).code ?? ''
       const msg = (err as { message?: string }).message ?? ''
       if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found') || code.includes('invalid-email')) {
-        setError('Invalid email or password. If this is your first visit, click "Load demo data" below first.')
+        setError('Invalid email or password. If this is your first visit, the demo data is loading automatically — wait for the "ready" message then try again.')
       } else if (code.includes('too-many-requests')) {
         setError('Too many attempts. Try again in a minute.')
       } else if (code.includes('network-request-failed') || code.includes('internal-error')) {
         setError('Network error. Check your connection and try again.')
+      } else if (code.includes('operation-not-allowed')) {
+        setError('Email/Password sign-in is not enabled in Firebase. Contact the administrator.')
       } else if (code.includes('api-key-not-valid') || code.includes('api-key/invalid')) {
         setError('Firebase configuration error. Contact the administrator.')
       } else {
-        // Show the raw Firebase code so we can diagnose unknown issues
-        setError(code ? `Login failed (${code}). If this is your first visit, click "Load demo data" below to create the demo accounts.` : 'Login failed. If this is your first visit, click "Load demo data" below to create the accounts.')
+        setError(code ? `Login failed (${code}).` : 'Login failed. Please try again.')
       }
       console.error('Login error:', { code, message: msg })
     } finally {
@@ -69,15 +106,30 @@ export function AuthScreen() {
     }
   }
 
+  if (initializing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-background to-teal-50 dark:from-emerald-950/50 dark:via-background dark:to-teal-950/40 gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30">
+          <TrendingUp className="h-6 w-6 text-white" />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Setting up your planner…
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-emerald-50 via-background to-teal-50 dark:from-emerald-950/50 dark:via-background dark:to-teal-950/40">
+      {/* Decorative gradient blobs */}
       <div className="pointer-events-none absolute -top-40 -left-32 h-96 w-96 rounded-full bg-emerald-400/20 blur-3xl dark:bg-emerald-500/10" />
       <div className="pointer-events-none absolute -bottom-40 -right-32 h-96 w-96 rounded-full bg-teal-400/20 blur-3xl dark:bg-teal-500/10" />
       <div className="pointer-events-none absolute top-1/3 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-emerald-300/10 blur-3xl dark:bg-emerald-400/5" />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-2 lg:gap-12">
-          {/* Hero panel (desktop only) */}
+          {/* ── Left hero panel (hidden on mobile) ─────────────────────── */}
           <div className="hidden lg:flex lg:flex-col lg:justify-center">
             <div className="mb-8 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30">
@@ -88,6 +140,7 @@ export function AuthScreen() {
                 <p className="text-xs text-muted-foreground">Budget Planner</p>
               </div>
             </div>
+
             <h1 className="text-4xl xl:text-5xl font-bold tracking-tight leading-[1.1] text-balance">
               Take control of your{' '}
               <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent dark:from-emerald-400 dark:to-teal-400">
@@ -97,6 +150,7 @@ export function AuthScreen() {
             <p className="mt-4 max-w-md text-base text-muted-foreground">
               The beautiful, automated budget planner that makes managing money simple.
             </p>
+
             <ul className="mt-8 space-y-4">
               {FEATURES.map((f) => (
                 <li key={f.title} className="flex items-start gap-3">
@@ -110,6 +164,7 @@ export function AuthScreen() {
                 </li>
               ))}
             </ul>
+
             <div className="mt-10 flex items-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Check className="h-3.5 w-3.5 text-emerald-500" />
@@ -123,7 +178,7 @@ export function AuthScreen() {
             </div>
           </div>
 
-          {/* Auth card */}
+          {/* ── Right auth card ────────────────────────────────────────── */}
           <div className="mx-auto w-full max-w-md lg:ml-auto lg:mr-0">
             <div className="mb-6 flex items-center justify-center gap-2.5 lg:hidden">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/30">
@@ -190,6 +245,7 @@ export function AuthScreen() {
                 </Button>
               </form>
 
+              {/* Demo accounts */}
               <div className="mt-6 rounded-lg border border-emerald-200/60 bg-emerald-50/60 p-3 dark:border-emerald-800/40 dark:bg-emerald-950/20">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                   <Check className="h-3.5 w-3.5" />
@@ -226,31 +282,6 @@ export function AuthScreen() {
                   Please contact your admin to get access.
                 </p>
               </div>
-
-              {/* First-time setup: creates admin + demo users and sample data */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3 w-full gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                disabled={seeding || loading}
-                onClick={async () => {
-                  setSeeding(true)
-                  setError(null)
-                  try {
-                    toast.info('Loading demo data… this takes ~10 seconds')
-                    const { seedClient } = await import('@/lib/seed-client')
-                    await seedClient()
-                    toast.success("Demo data loaded! You're now signed in as the demo user.")
-                  } catch (e) {
-                    setError('Could not load demo data: ' + (e as Error).message)
-                    setSeeding(false)
-                  }
-                }}
-              >
-                {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {seeding ? 'Loading demo data…' : 'First time? Click here to load demo data'}
-              </Button>
             </Card>
 
             <p className="mt-6 text-center text-xs text-muted-foreground">

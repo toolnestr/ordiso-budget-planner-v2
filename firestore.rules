@@ -3,20 +3,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── User profiles ───
-    // Each user can read their own profile. Writes are restricted: demo users
-    // cannot modify their profile, and admins can update other users (ban/promote).
+    // Each user can read their own profile. Any signed-in user can create their
+    // own profile on signup. Admins can read/update all user profiles.
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow create: if request.auth != null; // signup creates own profile
-      allow update: if request.auth != null
-        && !isDemo(userId)
+      allow read: if request.auth != null
         && (request.auth.uid == userId || isAdmin());
-      allow delete: if request.auth != null && isAdmin() && request.auth.uid != userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId;
+      allow update: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
+      allow delete: if request.auth != null
+        && isAdmin() && request.auth.uid != userId;
     }
 
     // ─── Per-user data collections ───
     // Every document carries a `userId` field. Users can only read/write their
-    // own data. Demo users can read but NOT write (data is read-only for demos).
+    // own data. Demo users (isDemo == true) can read but NOT write — their
+    // data is read-only so the demo always looks pristine.
     match /{collection}/{docId} {
       allow read: if request.auth != null
         && resource.data.userId == request.auth.uid;
@@ -35,16 +38,13 @@ service cloud.firestore {
     }
 
     // ─── Helper functions ───
-    // Check if the current user is an admin by reading their profile.
     function isAdmin() {
       return request.auth != null
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Check if a user is the demo account (by reading their profile's isDemo flag).
-    // The demo user's data is read-only so the demo always looks pristine.
     function isDemo(uid) {
-      return exists(/databases/$(database)/documents/users/$(uid)).data.isDemo == true;
+      return get(/databases/$(database)/documents/users/$(uid)).data.isDemo == true;
     }
   }
 }
